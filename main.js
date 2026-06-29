@@ -16,7 +16,7 @@ function createWindow() {
     }
   });
 
-  mainWindow.loadURL("http://localhost:3000");
+  mainWindow.loadURL("https://rohit-ai-server.onrender.com");
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
