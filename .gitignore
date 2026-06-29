@@ -1,7 +1,4 @@
 node_modules/
 dist/
 build/
-out/
 .env
-*.exe
-*.msi
