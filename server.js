@@ -18,23 +18,24 @@ const client = new OpenAI({
 apiKey: process.env.OPENAI_API_KEY
 });
 
-// WEBSITE
 app.get("/", (req, res) => {
-
 res.sendFile(
 path.join(__dirname, "public", "index.html")
 );
-
 });
 
-// AI CHAT
 app.post("/chat", async (req, res) => {
 
 try {
 
 ```
-const userMessage =
-  req.body.message;
+const userMessage = req.body.message;
+
+if (!userMessage) {
+  return res.status(400).json({
+    error: "message required"
+  });
+}
 
 const completion =
   await client.chat.completions.create({
@@ -64,7 +65,7 @@ res.json({
 console.error(error);
 
 res.status(500).json({
-  error: "AI failed"
+  error: "AI request failed"
 });
 ```
 
@@ -73,9 +74,7 @@ res.status(500).json({
 });
 
 app.listen(PORT, () => {
-
 console.log(
 "Server running on port " + PORT
 );
-
 });
