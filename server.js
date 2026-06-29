@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
+const path = require("path");
 
 require("dotenv").config();
 
@@ -9,32 +10,31 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use(express.static("public"));
+
 const PORT = process.env.PORT || 10000;
 
 const client = new OpenAI({
 apiKey: process.env.OPENAI_API_KEY
 });
 
-// server check
+// WEBSITE
 app.get("/", (req, res) => {
-res.json({
-status: "AI online"
-});
+
+res.sendFile(
+path.join(__dirname, "public", "index.html")
+);
+
 });
 
-// AI chat route
+// AI CHAT
 app.post("/chat", async (req, res) => {
 
 try {
 
 ```
-const userMessage = req.body.message;
-
-if (!userMessage) {
-  return res.status(400).json({
-    error: "message required"
-  });
-}
+const userMessage =
+  req.body.message;
 
 const completion =
   await client.chat.completions.create({
@@ -64,7 +64,7 @@ res.json({
 console.error(error);
 
 res.status(500).json({
-  error: "AI request failed"
+  error: "AI failed"
 });
 ```
 
@@ -73,5 +73,9 @@ res.status(500).json({
 });
 
 app.listen(PORT, () => {
-console.log("Server running on port " + PORT);
+
+console.log(
+"Server running on port " + PORT
+);
+
 });

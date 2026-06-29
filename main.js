@@ -1,36 +1,40 @@
-const { app, BrowserWindow, shell } = require("electron");
-const { spawn } = require("child_process");
-
-let mainWindow;
+const { app, BrowserWindow } = require("electron");
+const path = require("path");
 
 function createWindow() {
 
-  mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    autoHideMenuBar: true,
+const mainWindow = new BrowserWindow({
+width: 1200,
+height: 800,
 
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true
-    }
-  });
 
-  mainWindow.loadURL("https://rohit-ai-server.onrender.com");
+webPreferences: {
+  nodeIntegration: true,
+  contextIsolation: false
+}
+```
 
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: "deny" };
-  });
+});
+
+const filePath = path.join(
+__dirname,
+"public",
+"index.html"
+);
+
+mainWindow.loadFile(filePath)
+.then(() => {
+console.log("HTML Loaded");
+})
+.catch(err => {
+console.error("LOAD ERROR:", err);
+});
+
+
+mainWindow.webContents.openDevTools();
+
 }
 
 app.whenReady().then(() => {
-
-  // start backend
-  spawn("node", ["server.js"], {
-    shell: true,
-    stdio: "inherit"
-  });
-
-  createWindow();
+createWindow();
 });

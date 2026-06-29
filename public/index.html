@@ -4,107 +4,122 @@
 
 <head>
 
-  <title>Rohit AI</title>
+<meta charset="UTF-8">
 
-  <link rel="stylesheet" href="style.css">
+<title>Rohit AI</title>
+
+<style>
+
+body{
+  background:#111;
+  color:white;
+  font-family:Arial;
+  padding:20px;
+}
+
+#chatBox{
+  height:500px;
+  overflow-y:auto;
+  border:1px solid #444;
+  padding:10px;
+  margin-bottom:10px;
+}
+
+input{
+  width:80%;
+  padding:10px;
+}
+
+button{
+  padding:10px;
+}
+
+</style>
 
 </head>
 
-<body class="default-theme">
+<body>
 
-  <div class="sidebar">
+<h1>Rohit AI</h1>
 
-    <div>
+<div id="chatBox">
+<div style="color:lightgreen;">
+AI Online 24/7
+</div>
+</div>
 
-      <h2>Rohit AI</h2>
+<input
+id="userInput"
+type="text"
+placeholder="Type message..."
 
-      <button class="new-chat">
-        + New Chat
-      </button>
+>
 
-      <div class="themes">
+<button onclick="sendMessage()">
+Send
+</button>
 
-        <h3>Themes</h3>
+<script>
 
-        <button onclick="setTheme('default')">
-          Neon Blue
-        </button>
+async function sendMessage() {
 
-        <button onclick="setTheme('purple')">
-          Purple
-        </button>
+  const input =
+    document.getElementById("userInput");
 
-        <button onclick="setTheme('green')">
-          Matrix
-        </button>
+  const chatBox =
+    document.getElementById("chatBox");
 
-        <button onclick="setTheme('red')">
-          Cyber Red
-        </button>
+  const userMessage =
+    input.value.trim();
 
-        <button onclick="setTheme('gold')">
-          Gold
-        </button>
+  if (!userMessage) return;
 
-        <button onclick="setTheme('pink')">
-          Pink Neon
-        </button>
+  chatBox.innerHTML +=
+    "<div><b>You:</b> " +
+    userMessage +
+    "</div>";
 
-        <button onclick="setTheme('light')">
-          Light Mode
-        </button>
+  input.value = "";
 
-      </div>
+  try {
 
-    </div>
+    const res = await fetch(
+      "/chat",
+      {
 
-    <div class="sidebar-bottom">
+        method: "POST",
 
-      Rohit AI v1
+        headers: {
+          "Content-Type": "application/json"
+        },
 
-    </div>
+        body: JSON.stringify({
+          message: userMessage
+        })
 
-  </div>
+      }
+    );
 
-  <div class="main">
+    const data = await res.json();
 
-    <div class="topbar">
+    chatBox.innerHTML +=
+      "<div><b>AI:</b> " +
+      data.reply +
+      "</div>";
 
-      Rohit AI
+    chatBox.scrollTop =
+      chatBox.scrollHeight;
 
-    </div>
+  } catch (error) {
 
-    <div id="chat-box">
+    chatBox.innerHTML +=
+      "<div style='color:red;'>Connection Error</div>";
 
-      <div class="welcome">
+  }
 
-        <h1>Welcome To Rohit AI</h1>
+}
 
-      </div>
-
-    </div>
-
-    <div class="input-container">
-
-      <div class="input-area">
-
-        <input
-          type="text"
-          id="message"
-          placeholder="Message Rohit AI..."
-        >
-
-        <button onclick="sendMessage()">
-          ➜
-        </button>
-
-      </div>
-
-    </div>
-
-  </div>
-
-  <script src="script.js"></script>
+</script>
 
 </body>
 
