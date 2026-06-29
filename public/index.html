@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+  <title>Rohit AI</title>
+
+  <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body class="default-theme">
+
+  <div class="sidebar">
+
+    <div>
+
+      <h2>Rohit AI</h2>
+
+      <button class="new-chat">
+        + New Chat
+      </button>
+
+      <div class="themes">
+
+        <h3>Themes</h3>
+
+        <button onclick="setTheme('default')">
+          Neon Blue
+        </button>
+
+        <button onclick="setTheme('purple')">
+          Purple
+        </button>
+
+        <button onclick="setTheme('green')">
+          Matrix
+        </button>
+
+        <button onclick="setTheme('red')">
+          Cyber Red
+        </button>
+
+        <button onclick="setTheme('gold')">
+          Gold
+        </button>
+
+        <button onclick="setTheme('pink')">
+          Pink Neon
+        </button>
+
+        <button onclick="setTheme('light')">
+          Light Mode
+        </button>
+
+      </div>
+
+    </div>
+
+    <div class="sidebar-bottom">
+
+      Rohit AI v1
+
+    </div>
+
+  </div>
+
+  <div class="main">
+
+    <div class="topbar">
+
+      Rohit AI
+
+    </div>
+
+    <div id="chat-box">
+
+      <div class="welcome">
+
+        <h1>Welcome To Rohit AI</h1>
+
+      </div>
+
+    </div>
+
+    <div class="input-container">
+
+      <div class="input-area">
+
+        <input
+          type="text"
+          id="message"
+          placeholder="Message Rohit AI..."
+        >
+
+        <button onclick="sendMessage()">
+          ➜
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+
+</body>
+
+</html>
