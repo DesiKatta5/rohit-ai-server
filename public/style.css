@@ -244,3 +244,11 @@ body.theme-purple {
   display: flex;
   height: 100vh;
 }
+.logo {
+  width: 34px;
+  height: 34px;
+  vertical-align: middle;
+  margin-right: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #00f7ff;
+}
