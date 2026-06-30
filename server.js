@@ -26,6 +26,15 @@ path.join(__dirname, "public", "index.html")
 
 });
 
+const systemRule = `
+You are an AI assistant.
+
+Always follow:
+- respond in step-by-step format
+- use separate paragraphs
+- never write everything in one line
+`;
+
 app.post("/chat", async (req, res) => {
 
 try {
@@ -55,6 +64,7 @@ res.json({
 });
 
 
+
 } catch (error) {
 
 
@@ -63,6 +73,18 @@ console.error(error);
 res.status(500).json({
   reply: "AI Error"
 });
+
+function cleanAI(text) {
+  return text
+    // remove JSON escaping
+    .replace(/\\\//g, "/")
+    .replace(/\\\(/g, "(")
+    .replace(/\\\)/g, ")")
+    .replace(/\\\{/g, "{")
+    .replace(/\\\}/g, "}")
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, "\\");
+}
 
 
 }

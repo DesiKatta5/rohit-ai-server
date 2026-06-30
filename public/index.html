@@ -1,168 +1,44 @@
 <!DOCTYPE html>
-
-<html>
-
+<html lang="en">
 <head>
-
-  <meta charset="UTF-8">
-
-  <title>Rohit AI</title>
-
-  <style>
-
-    body{
-      margin:0;
-      padding:20px;
-      background:#111;
-      color:white;
-      font-family:Arial;
-    }
-
-    h1{
-      text-align:center;
-    }
-
-    #chatBox{
-      height:500px;
-      overflow-y:auto;
-      border:1px solid #444;
-      padding:10px;
-      margin-bottom:10px;
-      border-radius:10px;
-      background:#1a1a1a;
-    }
-
-    .user{
-      margin:10px 0;
-      color:#4da6ff;
-    }
-
-    .ai{
-      margin:10px 0;
-      color:#00ff99;
-    }
-
-    #bottomBar{
-      display:flex;
-      gap:10px;
-    }
-
-    #userInput{
-      flex:1;
-      padding:12px;
-      border:none;
-      border-radius:10px;
-      font-size:16px;
-      outline:none;
-    }
-
-    button{
-      padding:12px 20px;
-      border:none;
-      border-radius:10px;
-      background:#00cc66;
-      color:white;
-      font-size:16px;
-      cursor:pointer;
-    }
-
-    button:hover{
-      opacity:0.9;
-    }
-
-  </style>
-
+<meta charset="UTF-8">
+<title>Neon AI</title>
+<link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-  <h1>Rohit AI</h1>
+<div class="app">
 
-  <div id="chatBox">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="logo">⚡ NEON AI</div>
+    
+ <button onclick="setTheme('theme-neon')">Neon</button>
+<button onclick="setTheme('theme-blue')">Blue</button>
+<button onclick="setTheme('theme-green')">Green</button>
+<button onclick="setTheme('theme-purple')">Purple</button>
 
-```
-<div class="ai">
-  AI Online 24/7
+    <div class="footer">MR ROHIT AI</div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <div class="header">🔥 NEON CHAT AI</div>
+
+    <div id="chatBox"></div>
+
+    <div class="input-area">
+      <input id="userInput" placeholder="Ask something..." />
+      <button id="sendBtn">SEND ⚡</button>
+    </div>
+
+  </div>
+
 </div>
-```
 
-  </div>
-
-  <div id="bottomBar">
-
-```
-<input
-  id="userInput"
-  type="text"
-  placeholder="Type your message..."
->
-
-<button onclick="sendMessage()">
-  Send
-</button>
-```
-
-  </div>
-
-  <script>
-
-    async function sendMessage() {
-
-      const input =
-        document.getElementById("userInput");
-
-      const chatBox =
-        document.getElementById("chatBox");
-
-      const userMessage =
-        input.value.trim();
-
-      if (!userMessage) return;
-
-      chatBox.innerHTML +=
-        '<div class="user"><b>You:</b> ' +
-        userMessage +
-        '</div>';
-
-      input.value = "";
-
-      try {
-
-        const res = await fetch("/chat", {
-
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-            message: userMessage
-          })
-
-        });
-
-        const data = await res.json();
-
-        chatBox.innerHTML +=
-          '<div class="ai"><b>AI:</b> ' +
-          data.reply +
-          '</div>';
-
-      } catch (error) {
-
-        chatBox.innerHTML +=
-          '<div class="ai" style="color:red;">Connection Error</div>';
-
-      }
-
-      chatBox.scrollTop =
-        chatBox.scrollHeight;
-
-    }
-
-  </script>
+<script src="script.js"></script>
 
 </body>
-
 </html>
