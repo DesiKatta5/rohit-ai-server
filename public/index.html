@@ -4,122 +4,164 @@
 
 <head>
 
-<meta charset="UTF-8">
+  <meta charset="UTF-8">
 
-<title>Rohit AI</title>
+  <title>Rohit AI</title>
 
-<style>
+  <style>
 
-body{
-  background:#111;
-  color:white;
-  font-family:Arial;
-  padding:20px;
-}
+    body{
+      margin:0;
+      padding:20px;
+      background:#111;
+      color:white;
+      font-family:Arial;
+    }
 
-#chatBox{
-  height:500px;
-  overflow-y:auto;
-  border:1px solid #444;
-  padding:10px;
-  margin-bottom:10px;
-}
+    h1{
+      text-align:center;
+    }
 
-input{
-  width:80%;
-  padding:10px;
-}
+    #chatBox{
+      height:500px;
+      overflow-y:auto;
+      border:1px solid #444;
+      padding:10px;
+      margin-bottom:10px;
+      border-radius:10px;
+      background:#1a1a1a;
+    }
 
-button{
-  padding:10px;
-}
+    .user{
+      margin:10px 0;
+      color:#4da6ff;
+    }
 
-</style>
+    .ai{
+      margin:10px 0;
+      color:#00ff99;
+    }
+
+    #bottomBar{
+      display:flex;
+      gap:10px;
+    }
+
+    #userInput{
+      flex:1;
+      padding:12px;
+      border:none;
+      border-radius:10px;
+      font-size:16px;
+      outline:none;
+    }
+
+    button{
+      padding:12px 20px;
+      border:none;
+      border-radius:10px;
+      background:#00cc66;
+      color:white;
+      font-size:16px;
+      cursor:pointer;
+    }
+
+    button:hover{
+      opacity:0.9;
+    }
+
+  </style>
 
 </head>
 
 <body>
 
-<h1>Rohit AI</h1>
+  <h1>Rohit AI</h1>
 
-<div id="chatBox">
-<div style="color:lightgreen;">
-AI Online 24/7
-</div>
-</div>
+  <div id="chatBox">
 
+```
+<div class="ai">
+  AI Online 24/7
+</div>
+```
+
+  </div>
+
+  <div id="bottomBar">
+
+```
 <input
-id="userInput"
-type="text"
-placeholder="Type message..."
-
+  id="userInput"
+  type="text"
+  placeholder="Type your message..."
 >
 
 <button onclick="sendMessage()">
-Send
+  Send
 </button>
+```
 
-<script>
+  </div>
 
-async function sendMessage() {
+  <script>
 
-  const input =
-    document.getElementById("userInput");
+    async function sendMessage() {
 
-  const chatBox =
-    document.getElementById("chatBox");
+      const input =
+        document.getElementById("userInput");
 
-  const userMessage =
-    input.value.trim();
+      const chatBox =
+        document.getElementById("chatBox");
 
-  if (!userMessage) return;
+      const userMessage =
+        input.value.trim();
 
-  chatBox.innerHTML +=
-    "<div><b>You:</b> " +
-    userMessage +
-    "</div>";
+      if (!userMessage) return;
 
-  input.value = "";
+      chatBox.innerHTML +=
+        '<div class="user"><b>You:</b> ' +
+        userMessage +
+        '</div>';
 
-  try {
+      input.value = "";
 
-    const res = await fetch(
-      "/chat",
-      {
+      try {
 
-        method: "POST",
+        const res = await fetch("/chat", {
 
-        headers: {
-          "Content-Type": "application/json"
-        },
+          method: "POST",
 
-        body: JSON.stringify({
-          message: userMessage
-        })
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+            message: userMessage
+          })
+
+        });
+
+        const data = await res.json();
+
+        chatBox.innerHTML +=
+          '<div class="ai"><b>AI:</b> ' +
+          data.reply +
+          '</div>';
+
+      } catch (error) {
+
+        chatBox.innerHTML +=
+          '<div class="ai" style="color:red;">Connection Error</div>';
 
       }
-    );
 
-    const data = await res.json();
+      chatBox.scrollTop =
+        chatBox.scrollHeight;
 
-    chatBox.innerHTML +=
-      "<div><b>AI:</b> " +
-      data.reply +
-      "</div>";
+    }
 
-    chatBox.scrollTop =
-      chatBox.scrollHeight;
-
-  } catch (error) {
-
-    chatBox.innerHTML +=
-      "<div style='color:red;'>Connection Error</div>";
-
-  }
-
-}
-
-</script>
+  </script>
 
 </body>
 
