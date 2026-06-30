@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <title>NexAI</title>
 <link rel="stylesheet" href="style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="logo.png">
 </head>
 
 <body>
@@ -14,13 +16,14 @@
   <div class="sidebar">
     <div class="logo">⚡ NEX-GPT</div>
     
- <button onclick="setTheme('theme-neon')">Neon</button>
-<button onclick="setTheme('theme-blue')">Blue</button>
-<button onclick="setTheme('theme-green')">Green</button>
-<button onclick="setTheme('theme-purple')">Purple</button>
+<button class="theme-btn" onclick="setTheme('theme-neon', this)">Neon</button>
+<button class="theme-btn" onclick="setTheme('theme-blue', this)">Blue</button>
+<button class="theme-btn" onclick="setTheme('theme-green', this)">Green</button>
+<button class="theme-btn" onclick="setTheme('theme-purple', this)">Purple</button>
 
     <div class="footer">MR ROHIT AI</div>
   </div>
+  
 
   <!-- MAIN -->
   <div class="main">

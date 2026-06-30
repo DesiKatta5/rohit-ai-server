@@ -183,3 +183,96 @@ body.theme-purple {
 @keyframes blink {
   50% { opacity: 0; }
 }
+@media (max-width: 768px) {
+
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* sidebar becomes top bar */
+  .sidebar {
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  /* theme buttons stay inline */
+  .theme-btn {
+    flex-shrink: 0;
+    font-size: 10px;
+    padding: 6px 10px;
+  }
+
+  /* main stays below sidebar */
+  .main {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* FIX CHAT DISAPPEARING */
+  #chatBox {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* prevent header jumping to center */
+  .header {
+    text-align: center;
+    font-size: 14px;
+    padding: 8px;
+  }
+}
+@media (max-width: 768px) {
+
+  .theme-btn {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    transition: 0.3s;
+    box-shadow: 0 0 10px currentColor;
+  }
+
+  /* glowing animation */
+  .theme-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(0,255,255,0.4), transparent);
+    transition: 0.5s;
+  }
+
+  .theme-btn:hover::before {
+    left: 100%;
+  }
+
+  .theme-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* ACTIVE BUTTON GLOW */
+  .theme-btn.active {
+    box-shadow: 0 0 20px #0ff, 0 0 40px #0ff;
+    transform: scale(1.05);
+  }
+}
