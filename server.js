@@ -37,6 +37,19 @@ Always follow:
 
 app.post("/chat", async (req, res) => {
 
+const userMessage = req.body.message.toLowerCase();
+
+if (
+  userMessage.includes("who made you") ||
+  userMessage.includes("who is your owner") ||
+  userMessage.includes("who created you") ||
+  userMessage.includes("developer")
+) {
+  return res.json({
+    reply: "My owner is MR ROHIT."
+  });
+}
+
 try {
 
 const userMessage =
