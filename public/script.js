@@ -1,102 +1,258 @@
 const input = document.getElementById("userInput");
 const chatBox = document.getElementById("chatBox");
-const sendBtn = document.getElementById("sendBtn");
+const micBtn = document.getElementById("micBtn");
+const themeMenu = document.getElementById("themeMenu");
+const recentChats = document.getElementById("recentChats");
+const imageInput = document.getElementById("imageInput");
+const imagePreview = document.getElementById("imagePreview");
+const welcomeText = document.getElementById("welcomeText");
+const modelPickerButton = document.getElementById("modelPickerButton");
+const modelMenu = document.getElementById("modelMenu");
+const selectedModelLabel = document.getElementById("selectedModelLabel");
 
-function typeWriter(element, text, speed = 80) {
-  element.innerHTML = "";
+const themes = ["theme-light", "theme-dark", "theme-blue", "theme-green", "theme-dark-blue", "theme-dark-red"];
+const nyxoModels = {
+  "nyxo-1.3": "NYXO 1.3",
+  "nyxo-flash": "NYXO Flash",
+  "nyxo-pro": "NYXO Pro",
+  "nyxo-beta": "NYXO Beta"
+};
+const chatStorageKey = "nyxoChatHistory";
+let currentChatId = null;
+let autoThemeTimer = null;
+let attachedImage = null;
+let selectedModelKey = localStorage.getItem("nyxoModel") || "nyxo-flash";
+let recognition = null;
+let isListening = false;
 
-  const words = text.split(" ");
-  let i = 0;
+function setTheme(themeName, saveChoice = true) {
+  document.body.classList.remove(...themes);
+  document.body.classList.add(themeName);
 
-  function addWord() {
-    if (i < words.length) {
-      element.innerHTML += words[i] + " ";
-      i++;
-      setTimeout(addWord, speed);
-    }
+  if (saveChoice) {
+    clearInterval(autoThemeTimer);
+    localStorage.setItem("theme", themeName);
+    localStorage.setItem("themeMode", "manual");
   }
-
-  addWord();
 }
 
-function addMessage(type, text) {
+function toggleThemes() {
+  themeMenu.classList.toggle("open");
+}
 
+function startAutoTheme() {
+  localStorage.setItem("themeMode", "auto");
+  cycleTheme();
+  clearInterval(autoThemeTimer);
+  autoThemeTimer = setInterval(cycleTheme, 15000);
+  themeMenu.classList.remove("open");
+}
+
+function cycleTheme() {
+  const currentTheme = themes.find((theme) => document.body.classList.contains(theme)) || themes[0];
+  const nextTheme = themes[(themes.indexOf(currentTheme) + 1) % themes.length];
+  setTheme(nextTheme, false);
+}
+
+function addMessage(type, text, image = null) {
   const div = document.createElement("div");
   div.className = type;
 
-  if (type === "ai") {
-    div.innerHTML = marked.parse(text);
+  const content = document.createElement("div");
+
+  if (type === "ai" && window.marked) {
+    content.innerHTML = marked.parse(text);
   } else {
-    div.textContent = text;
+    content.textContent = text;
   }
 
-  chatBox.appendChild(div);
+  div.appendChild(content);
 
+  if (image) {
+    const img = document.createElement("img");
+    img.className = "message-image";
+    img.src = image.dataUrl;
+    img.alt = image.name || "Uploaded image";
+    div.appendChild(img);
+  }
+
+  document.body.classList.add("has-messages");
+  chatBox.appendChild(div);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 async function sendMessage() {
   const msg = input.value.trim();
-  const userMessage = input.value;
+  const image = attachedImage;
 
-saveChat(userMessage);
-  
-  if (!msg) return;
+  if (!msg && !image) return;
 
-  addMessage("user", msg);
+  const userText = msg || "Uploaded an image";
+  addMessage("user", userText, image);
+  saveMessage("user", userText, image);
   input.value = "";
+  clearAttachedImage();
+  input.focus();
 
   try {
     const res = await fetch("/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: msg })
+      body: JSON.stringify({
+        message: userText,
+        image: image,
+        modelKey: selectedModelKey
+      })
     });
 
     const data = await res.json();
-    addMessage("ai", data.reply || "No response");
 
+    if (!res.ok) {
+      throw new Error(data.reply || "AI request failed");
+    }
+
+    const reply = data.reply || "No response";
+    addMessage("ai", reply, data.image || null);
+    saveMessage("ai", reply, data.image || null);
   } catch (err) {
-    addMessage("ai", "Connection Error");
+    const errorMessage = err.message || "Connection error. Please check the server and try again.";
+    addMessage("ai", errorMessage);
+    saveMessage("ai", errorMessage);
   }
 }
 
+function openImagePicker() {
+  imageInput.click();
+}
 
-/* EVENTS */
-sendBtn.onclick = sendMessage;
+function clearAttachedImage() {
+  attachedImage = null;
+  imageInput.value = "";
+  imagePreview.innerHTML = "";
+  imagePreview.classList.remove("active");
+}
 
-input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") sendMessage();
-});
+function renderImagePreview(image) {
+  imagePreview.innerHTML = "";
+  imagePreview.classList.add("active");
 
-/* THEME */
-window.setTheme = function(theme) {
-  const body = document.body;
+  const img = document.createElement("img");
+  img.src = image.dataUrl;
+  img.alt = image.name;
 
-  // remove all themes
-  body.classList.remove(
-    "theme-neon",
-    "theme-blue",
-    "theme-green",
-    "theme-purple"
-  );
+  const name = document.createElement("span");
+  name.textContent = image.name;
 
-  // add selected theme
-  body.classList.add(theme);
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.textContent = "x";
+  remove.setAttribute("aria-label", "Remove image");
+  remove.addEventListener("click", clearAttachedImage);
 
-  // save theme (optional but useful)
-  localStorage.setItem("theme", theme);
-};
+  imagePreview.append(img, name, remove);
+}
 
-/* load saved theme */
-window.onload = () => {
-  const saved = localStorage.getItem("theme");
-  if (saved) {
-    document.body.classList.add(saved);
-  } else {
-    document.body.classList.add("theme-neon");
+function handleImageUpload(file) {
+  if (!file || !file.type.startsWith("image/")) return;
+
+  if (file.size > 4 * 1024 * 1024) {
+    alert("Please upload an image smaller than 4MB.");
+    return;
   }
-};
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    attachedImage = {
+      name: file.name,
+      type: file.type,
+      dataUrl: reader.result
+    };
+
+    renderImagePreview(attachedImage);
+  };
+
+  reader.readAsDataURL(file);
+}
+
+function setModel(modelKey) {
+  if (!nyxoModels[modelKey]) return;
+
+  selectedModelKey = modelKey;
+  localStorage.setItem("nyxoModel", modelKey);
+  selectedModelLabel.textContent = nyxoModels[modelKey];
+
+  document.querySelectorAll(".model-option").forEach((button) => {
+    const isActive = button.dataset.model === modelKey;
+    button.classList.toggle("active", isActive);
+    button.querySelector(".model-check").textContent = isActive ? "✓" : "";
+  });
+
+  modelMenu.classList.remove("open");
+  modelPickerButton.setAttribute("aria-expanded", "false");
+}
+
+function toggleModelMenu() {
+  const isOpen = modelMenu.classList.toggle("open");
+  modelPickerButton.setAttribute("aria-expanded", String(isOpen));
+}
+
+function setupVoiceInput() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    micBtn.title = "Voice input is not supported in this browser";
+    micBtn.classList.add("unsupported");
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.interimResults = true;
+  recognition.continuous = false;
+
+  recognition.onstart = () => {
+    isListening = true;
+    micBtn.classList.add("listening");
+    micBtn.setAttribute("aria-label", "Stop voice input");
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    micBtn.classList.remove("listening");
+    micBtn.setAttribute("aria-label", "Voice input");
+  };
+
+  recognition.onerror = () => {
+    isListening = false;
+    micBtn.classList.remove("listening");
+  };
+
+  recognition.onresult = (event) => {
+    let transcript = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+
+    input.value = transcript.trim();
+    input.focus();
+  };
+}
+
+function toggleVoiceInput() {
+  if (!recognition) {
+    alert("Voice input is not supported in this browser.");
+    return;
+  }
+
+  if (isListening) {
+    recognition.stop();
+  } else {
+    recognition.start();
+  }
+}
+
 function openLogin() {
   document.getElementById("loginPopup").style.display = "flex";
 }
@@ -104,218 +260,249 @@ function openLogin() {
 function closeLogin() {
   document.getElementById("loginPopup").style.display = "none";
 }
+
 async function login() {
-
-  const gmail = document.getElementById("gmail").value;
-
-  const password = document.getElementById("password").value;
-
   alert("Login button working");
-
 }
-async function googleLogin() {
 
+async function googleLogin() {
   const provider = new firebase.auth.GoogleAuthProvider();
 
   try {
-
-    const result = await firebase.auth().signInWithPopup(provider);
-
-    const user = result.user;
-
+    await firebase.auth().signInWithPopup(provider);
     closeLogin();
-
-    // REMOVE LOGIN BUTTON
-    document.getElementById("loginButton").style.display = "none";
-
-    // SHOW ACCOUNT NAME
-    
-
   } catch (error) {
-
     console.error(error);
-
     alert("Google login failed");
-
   }
-
 }
+
 function toggleAccountMenu() {
-
   const menu = document.getElementById("accountMenu");
-
-  if (menu.style.display === "block") {
-
-    menu.style.display = "none";
-
-  } else {
-
-    menu.style.display = "block";
-
-  }
-
+  if (!menu) return;
+  menu.style.display = menu.style.display === "block" ? "none" : "block";
 }
+
 async function logout() {
-
   await firebase.auth().signOut();
-
   location.reload();
-
 }
+
 async function changeAccount() {
-
   await firebase.auth().signOut();
-
   openLogin();
-
 }
 
-function toggleThemes() {
-
-  const menu = document.getElementById("themeMenu");
-
-  if (menu.style.display === "block") {
-
-    menu.style.display = "none";
-
-  } else {
-
-    menu.style.display = "block";
-
-  }
-
-}
-
-function setTheme(themeName) {
-
-  document.body.className = themeName;
-
-  localStorage.setItem("theme", themeName);
-
-}
 function openHistory() {
-
-  const user = firebase.auth().currentUser;
-
-  // USER NOT LOGGED IN
-  if (!user) {
-
-    openLogin();
-
-    alert("Login first to use history");
-
-    return;
-  }
-
   document.getElementById("historyPopup").style.display = "flex";
-
   loadHistory();
-
 }
 
 function closeHistory() {
-
   document.getElementById("historyPopup").style.display = "none";
-
 }
-function saveChat(message) {
 
+function getSavedChats() {
   try {
-
-    const user = firebase.auth().currentUser;
-
-    // STOP IF NOT LOGGED IN
-    if (!user) return;
-
-    let chats = JSON.parse(localStorage.getItem("chatHistory")) || [];
-
-    chats.push(message);
-
-    localStorage.setItem("chatHistory", JSON.stringify(chats));
-
+    return JSON.parse(localStorage.getItem(chatStorageKey)) || [];
   } catch (err) {
+    return [];
+  }
+}
 
+function setSavedChats(chats) {
+  localStorage.setItem(chatStorageKey, JSON.stringify(chats));
+}
+
+function createChat(firstMessage) {
+  const title = firstMessage.substring(0, 48) || "New chat";
+
+  return {
+    id: Date.now().toString(),
+    title,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    messages: []
+  };
+}
+
+function saveMessage(role, text, image = null) {
+  try {
+    const chats = getSavedChats();
+    let chat = chats.find((item) => item.id === currentChatId);
+
+    if (!chat) {
+      chat = createChat(text);
+      currentChatId = chat.id;
+      chats.unshift(chat);
+    }
+
+    chat.messages.push({ role, text, image, createdAt: new Date().toISOString() });
+    chat.updatedAt = new Date().toISOString();
+
+    if (role === "user" && chat.messages.filter((message) => message.role === "user").length === 1) {
+      chat.title = text.substring(0, 48);
+    }
+
+    setSavedChats(chats);
+    renderRecentChats();
+  } catch (err) {
     console.log("History save error:", err);
+  }
+}
 
+function startNewChat() {
+  currentChatId = null;
+  chatBox.innerHTML = "";
+  document.body.classList.remove("has-messages");
+  input.value = "";
+  clearAttachedImage();
+  input.focus();
+}
+
+function openSavedChat(chatId) {
+  const chat = getSavedChats().find((item) => item.id === chatId);
+  if (!chat) return;
+
+  currentChatId = chat.id;
+  chatBox.innerHTML = "";
+
+  chat.messages.forEach((message) => {
+    addMessage(message.role === "ai" ? "ai" : "user", message.text, message.image);
+  });
+
+  closeHistory();
+}
+
+function renderRecentChats() {
+  if (!recentChats) return;
+
+  recentChats.querySelectorAll("button").forEach((button) => button.remove());
+
+  const chats = getSavedChats().slice(0, 8);
+
+  if (!chats.length) {
+    const empty = document.createElement("button");
+    empty.type = "button";
+    empty.disabled = true;
+    empty.innerText = "No saved chats yet";
+    recentChats.appendChild(empty);
+    return;
   }
 
+  chats.forEach((chat) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.innerText = chat.title || "Untitled chat";
+    button.addEventListener("click", () => openSavedChat(chat.id));
+    recentChats.appendChild(button);
+  });
 }
+
 function loadHistory() {
-
   const historyList = document.getElementById("historyList");
-
   historyList.innerHTML = "";
 
-  let chats = JSON.parse(localStorage.getItem("chatHistory")) || [];
+  const chats = getSavedChats();
 
-  chats.forEach(chat => {
+  if (!chats.length) {
+    const empty = document.createElement("div");
+    empty.className = "history-item";
+    empty.innerText = "No saved chats yet";
+    historyList.appendChild(empty);
+    return;
+  }
 
+  chats.forEach((chat) => {
     const div = document.createElement("div");
-
     div.className = "history-item";
-
-    // FIRST MESSAGE TITLE
-    div.innerText = chat.substring(0, 40);
-
+    div.innerText = chat.title || "Untitled chat";
+    div.addEventListener("click", () => openSavedChat(chat.id));
     historyList.appendChild(div);
-
   });
-
 }
-window.addEventListener("load", () => {
 
-  firebase.auth().onAuthStateChanged((user) => {
+function renderAccount(user) {
+  const accountArea = document.getElementById("accountArea");
+  if (!accountArea) return;
 
-    const accountArea = document.getElementById("accountArea");
+  if (user) {
+    const photo = user.photoURL || "logo.png";
+    const name = user.displayName || user.email || "Nyxo user";
+    const firstName = name.split(" ")[0].split("@")[0];
+    welcomeText.textContent = `Welcome, ${firstName}. What's going on?`;
 
-    if (!accountArea) return;
-
-    // USER LOGGED IN
-    if (user) {
-
-      accountArea.innerHTML = `
-
-        <div class="account-wrapper">
-
-          <div class="account-box" onclick="toggleAccountMenu()">
-
-            <img src="${user.photoURL}" class="account-pfp">
-
-            <span>${user.displayName}</span>
-
-          </div>
-
-          <div class="account-menu" id="accountMenu">
-
-            <button onclick="changeAccount()">
-              Change Account
-            </button>
-
-            <button onclick="logout()">
-              Logout
-            </button>
-
-          </div>
-
+    accountArea.innerHTML = `
+      <div class="account-wrapper">
+        <div class="account-box" onclick="toggleAccountMenu()">
+          <img src="${photo}" class="account-pfp" alt="">
+          <span>${name}</span>
         </div>
+        <div class="account-menu" id="accountMenu">
+          <button onclick="changeAccount()" type="button">Change Account</button>
+          <button onclick="logout()" type="button">Logout</button>
+        </div>
+      </div>
+    `;
+  } else {
+    welcomeText.textContent = "Welcome. What's going on?";
+    accountArea.innerHTML = `
+      <button class="login-btn" onclick="openLogin()" id="loginButton" type="button">
+        Login
+      </button>
+    `;
+  }
+}
 
-      `;
+micBtn.addEventListener("click", toggleVoiceInput);
 
-    }
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendMessage();
+});
 
-    // USER LOGGED OUT
-    else {
+imageInput.addEventListener("change", () => {
+  handleImageUpload(imageInput.files[0]);
+});
 
-      accountArea.innerHTML = `
+modelPickerButton.addEventListener("click", toggleModelMenu);
 
-        <button class="login-btn" onclick="openLogin()" id="loginButton">
-          Login
-        </button>
-
-      `;
-
-    }
-
+document.querySelectorAll(".model-option").forEach((button) => {
+  button.addEventListener("click", () => {
+    setModel(button.dataset.model);
   });
+});
 
+document.addEventListener("click", (event) => {
+  if (!modelMenu.contains(event.target) && !modelPickerButton.contains(event.target)) {
+    modelMenu.classList.remove("open");
+    modelPickerButton.setAttribute("aria-expanded", "false");
+  }
+});
+
+document.querySelectorAll(".quick-actions button").forEach((button) => {
+  button.addEventListener("click", () => {
+    input.value = button.innerText === "Analyze an image"
+      ? "What is in this image?"
+      : button.innerText;
+    input.focus();
+  });
+});
+
+window.addEventListener("load", () => {
+  const saved = localStorage.getItem("theme");
+  const themeMode = localStorage.getItem("themeMode");
+
+  setTheme(themes.includes(saved) ? saved : "theme-light", false);
+
+  if (themeMode === "auto") {
+    startAutoTheme();
+  }
+
+  renderRecentChats();
+  setModel(nyxoModels[selectedModelKey] ? selectedModelKey : "nyxo-flash");
+  setupVoiceInput();
+
+  if (window.firebase) {
+    firebase.auth().onAuthStateChanged(renderAccount);
+  }
 });

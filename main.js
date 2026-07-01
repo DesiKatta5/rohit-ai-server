@@ -2,39 +2,34 @@ const { app, BrowserWindow } = require("electron");
 const path = require("path");
 
 function createWindow() {
+  const mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  });
 
-const mainWindow = new BrowserWindow({
-width: 1200,
-height: 800,
+  const filePath = path.join(__dirname, "public", "index.html");
 
+  mainWindow.loadFile(filePath)
+    .then(() => {
+      console.log("HTML Loaded");
+    })
+    .catch(err => {
+      console.error("LOAD ERROR:", err);
+    });
 
-webPreferences: {
-  nodeIntegration: true,
-  contextIsolation: false
-}
-```
-
-});
-
-const filePath = path.join(
-__dirname,
-"public",
-"index.html"
-);
-
-mainWindow.loadFile(filePath)
-.then(() => {
-console.log("HTML Loaded");
-})
-.catch(err => {
-console.error("LOAD ERROR:", err);
-});
-
-
-mainWindow.webContents.openDevTools();
-
+  mainWindow.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {
-createWindow();
+  createWindow();
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
 });

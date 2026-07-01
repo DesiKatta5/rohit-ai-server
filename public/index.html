@@ -1,196 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta charset="UTF-8">
-<title>NyxoGPT</title>
-<link rel="stylesheet" href="style.css">
-<link rel="icon" type="image/png" href="logo.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NyxoGPT</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/png" href="logo.png">
 </head>
 
-<body>
+<body class="theme-light">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="brand">
+          <span class="brand-mark">N</span>
+          <span>NyxoGPT</span>
+        </div>
+        <button class="icon-btn" type="button" aria-label="Collapse sidebar">[]</button>
+      </div>
 
-<div class="app">
+      <nav class="primary-nav" aria-label="Main navigation">
+        <button class="nav-item active" type="button" onclick="startNewChat()">
+          <span class="nav-icon">+</span>
+          <span>New chat</span>
+        </button>
+        <button class="nav-item" type="button">
+          <span class="nav-icon">?</span>
+          <span>Search chats</span>
+        </button>
+        <button class="nav-item" type="button" onclick="toggleThemes()">
+          <span class="nav-icon">...</span>
+          <span>Themes</span>
+        </button>
+      </nav>
 
-  <!-- SIDEBAR -->
+      <div class="theme-menu" id="themeMenu">
+        <button class="theme-btn" type="button" onclick="setTheme('theme-light')">Light</button>
+        <button class="theme-btn" type="button" onclick="setTheme('theme-dark')">Dark</button>
+        <button class="theme-btn" type="button" onclick="setTheme('theme-blue')">Blue</button>
+        <button class="theme-btn" type="button" onclick="setTheme('theme-green')">Green</button>
+        <button class="theme-btn" type="button" onclick="setTheme('theme-dark-blue')">Dark Blue</button>
+        <button class="theme-btn" type="button" onclick="setTheme('theme-dark-red')">Dark Red</button>
+        <button class="theme-btn" type="button" onclick="startAutoTheme()">Auto</button>
+      </div>
 
-  <div class="sidebar">   
-    <div class="header">NyxoGPT
-      <div class="history-toggle">
+      <section class="chat-list recents" aria-label="Recent chats" id="recentChats">
+        <h2>Recents</h2>
+      </section>
 
-  <button onclick="openHistory()" class="history-btn">
-    History
-  </button>
+      <div class="sidebar-footer">
+        <div class="builder-credit">Build By MR ROHIT</div>
+        <button onclick="openHistory()" class="offer-btn" type="button">Chat history</button>
+        <div id="accountArea" class="account-area">
+          <button class="login-btn" onclick="openLogin()" id="loginButton" type="button">Login</button>
+        </div>
+      </div>
+    </aside>
 
-</div>
-  <img src="logo.png" class="logo">
-  
-  <div class="theme-toggle">
+    <main class="main">
+      <header class="topbar">
+        <button class="mobile-menu" type="button" aria-label="Menu">=</button>
+        <div></div>
+        <button class="free-offer" type="button">Free offer</button>
+      </header>
 
-  <button onclick="toggleThemes()" class="theme-main-btn">
-    Themes
-  </button>
-  <div class="theme-toggle">
+      <section class="workspace">
+        <div class="welcome" id="welcome">
+          <h1 id="welcomeText">Welcome. What's going on?</h1>
+        </div>
 
-  <button onclick="toggleThemes()" class="theme-main-btn">
-    Themes
-  </button>
-  
+        <div id="chatBox" aria-live="polite"></div>
 
-  <div class="theme-menu" id="themeMenu">
+        <div class="composer-wrap">
+          <div class="image-preview" id="imagePreview" aria-live="polite"></div>
+          <div class="composer">
+            <button class="composer-icon attach-btn" type="button" aria-label="Upload image" onclick="openImagePicker()">+</button>
+            <input id="imageInput" class="file-input" type="file" accept="image/*">
+            <input id="userInput" placeholder="Ask anything" autocomplete="off">
+            <div class="model-picker">
+              <button class="mode-btn" id="modelPickerButton" type="button" aria-expanded="false">
+                <span id="selectedModelLabel">NYXO Flash</span>
+              </button>
+              <div class="model-menu" id="modelMenu">
+                <button class="model-option" type="button" data-model="nyxo-1.3">
+                  <span class="model-check"></span>
+                  <span>
+                    <strong>NYXO 1.3</strong>
+                    <small>Fastest answers</small>
+                  </span>
+                </button>
+                <button class="model-option active" type="button" data-model="nyxo-flash">
+                  <span class="model-check">✓</span>
+                  <span>
+                    <strong>NYXO Flash</strong>
+                    <small>All-around help</small>
+                  </span>
+                </button>
+                <button class="model-option" type="button" data-model="nyxo-pro">
+                  <span class="model-check"></span>
+                  <span>
+                    <strong>NYXO Pro</strong>
+                    <small>Advanced maths and code</small>
+                  </span>
+                </button>
+                <button class="model-option" type="button" data-model="nyxo-beta">
+                  <span class="model-check"></span>
+                  <span>
+                    <strong>NYXO Beta</strong>
+                    <small>Vision and OCR</small>
+                  </span>
+                </button>
+                <div class="thinking-row">
+                  <span>
+                    <strong>Thinking level</strong>
+                    <small>Standard</small>
+                  </span>
+                  <span>›</span>
+                </div>
+              </div>
+            </div>
+            <button class="composer-icon mic-btn" id="micBtn" type="button" aria-label="Voice input"></button>
+          </div>
 
-    <!-- YOUR OLD THEME BUTTONS HERE -->
-<button class="theme-btn" onclick="setTheme('theme-neon', this)">Neon</button>
-<button class="theme-btn" onclick="setTheme('theme-blue', this)">Blue</button>
-<button class="theme-btn" onclick="setTheme('theme-green', this)">Green</button>
-<button class="theme-btn" onclick="setTheme('theme-purple', this)">Purple</button>
+          <div class="quick-actions">
+            <button type="button">Analyze an image</button>
+            <button type="button">Write or edit</button>
+            <button type="button">Look something up</button>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
-  
 
-</div>
-
-  <div class="theme-menu" id="themeMenu">
-
-    <button onclick="setTheme('theme-neon')">
-      Neon
-    </button>
-
-    <button onclick="setTheme('theme-dark')">
-      Dark
-    </button>
-
-    <button onclick="setTheme('theme-purple')">
-      Purple
-    </button>
-
-    <button onclick="setTheme('theme-light')">
-      Light
-    </button>
-
-  </div>
-  
-
-</div>
-</div>
-    
-<div class="theme-menu" id="themeMenu">
-
-  <button class="theme-btn" onclick="setTheme('theme-neon')">
-    Neon
-  </button>
-
-  <button class="theme-btn" onclick="setTheme('theme-green')">
-    Green
-  </button>
-
-  <button class="theme-btn" onclick="setTheme('theme-blue')">
-    Blue
-  </button>
-
-  <button class="theme-btn" onclick="setTheme('theme-purple')">
-    Purple
-  </button>
-
-</div>
-
-    <div class="footer">Powered By Rohit</div>
-    <div class="bottom-login" id="accountArea">
-
-  <button class="login-btn" onclick="openLogin()" id="loginButton">
-    Login
-  </button>
-
-</div>
-  </div>
-  
-
-  <!-- MAIN -->
-  <div class="main">
-
-    <div class="header">🔥 NyxoGPT</div>
-
-    <div id="chatBox"></div>
-
-    <div class="input-area">
-      <input id="userInput" placeholder="Ask something..." />
-      <button id="sendBtn">SEND ⚡</button>
+  <div id="loginPopup" class="login-popup">
+    <div class="login-box">
+      <h2>Login to NyxoGPT</h2>
+      <input type="email" id="gmail" placeholder="Enter Gmail">
+      <input type="password" id="password" placeholder="Enter Password">
+      <button class="main-login-btn" onclick="login()" type="button">Login</button>
+      <div class="divider">OR</div>
+      <button class="google-btn" onclick="googleLogin()" type="button">
+        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="">
+        Continue with Google
+      </button>
+      <button class="close-btn" onclick="closeLogin()" type="button">Close</button>
     </div>
-
   </div>
 
-</div>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="script.js"></script>
-
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
-
-<script>
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAFnJyCI8Y5MzxMYeVLSCgkm5sFVZLEmFs",
-  authDomain: "nex-gpt-ai.firebaseapp.com",
-  projectId: "nex-gpt-ai",
-  storageBucket: "nex-gpt-ai.firebasestorage.app",
-  messagingSenderId: "90044437595",
-  appId: "1:90044437595:web:54c1748660d584e76bdb7e",
-  measurementId: "G-ZQCCQ5KF7W"
-};
-
-firebase.initializeApp(firebaseConfig);
-
-</script>
-
-<div id="loginPopup" class="login-popup">
-
-  <div class="login-box">
-
-    <h2>Login to NEX-GPT</h2>
-
-    <input type="email" id="gmail" placeholder="Enter Gmail">
-
-    <input type="password" id="password" placeholder="Enter Password">
-
-    <button class="main-login-btn" onclick="login()">
-      Login
-    </button>
-
-    <div class="divider">
-      OR
+  <div id="historyPopup" class="history-popup">
+    <div class="history-box">
+      <div class="history-header">
+        <h2>Chat History</h2>
+        <button onclick="closeHistory()" type="button" aria-label="Close history">x</button>
+      </div>
+      <div id="historyList"></div>
     </div>
-
-    <button class="google-btn" onclick="googleLogin()">
-
-      <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg">
-
-      Continue with Google
-
-    </button>
-
-    <button class="close-btn" onclick="closeLogin()">
-      Close
-    </button>
-
   </div>
 
-</div>
-<div id="historyPopup" class="history-popup">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="script.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAFnJyCI8Y5MzxMYeVLSCgkm5sFVZLEmFs",
+      authDomain: "nex-gpt-ai.firebaseapp.com",
+      projectId: "nex-gpt-ai",
+      storageBucket: "nex-gpt-ai.firebasestorage.app",
+      messagingSenderId: "90044437595",
+      appId: "1:90044437595:web:54c1748660d584e76bdb7e",
+      measurementId: "G-ZQCCQ5KF7W"
+    };
 
-  <div class="history-box">
-
-    <div class="history-header">
-
-      <h2>Chat History</h2>
-
-      <button onclick="closeHistory()">✕</button>
-
-    </div>
-
-    <div id="historyList"></div>
-
-  </div>
-
-</div>
+    firebase.initializeApp(firebaseConfig);
+  </script>
 </body>
 </html>
