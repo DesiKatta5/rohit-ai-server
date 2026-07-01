@@ -10,13 +10,13 @@
 
 <body class="theme-light">
   <div class="app">
-    <aside class="sidebar">
+    <aside class="sidebar" id="appSidebar">
       <div class="sidebar-top">
         <div class="brand">
           <span class="brand-mark">N</span>
           <span>NyxoGPT</span>
         </div>
-        <button class="icon-btn" type="button" aria-label="Collapse sidebar">[]</button>
+        <button class="icon-btn" id="sidebarToggle" type="button" aria-label="Collapse sidebar" aria-controls="appSidebar" aria-expanded="true">[]</button>
       </div>
 
       <nav class="primary-nav" aria-label="Main navigation">
@@ -29,7 +29,9 @@
           <span>Search chats</span>
         </button>
         <button class="nav-item" type="button" onclick="toggleThemes()">
-          <span class="nav-icon">...</span>
+          <span class="nav-icon">
+            <img class="nav-logo-icon" src="theme-logo.png" alt="">
+          </span>
           <span>Themes</span>
         </button>
       </nav>
@@ -59,9 +61,8 @@
 
     <main class="main">
       <header class="topbar">
-        <button class="mobile-menu" type="button" aria-label="Menu">=</button>
+        <button class="mobile-menu" id="mobileMenuButton" type="button" aria-label="Open sidebar" aria-controls="appSidebar" aria-expanded="false">=</button>
         <div></div>
-        <button class="free-offer" type="button">Free offer</button>
       </header>
 
       <section class="workspace">
@@ -110,12 +111,30 @@
                     <small>Vision and OCR</small>
                   </span>
                 </button>
-                <div class="thinking-row">
+                <button class="thinking-row" id="thinkingToggle" type="button" aria-expanded="false">
                   <span>
                     <strong>Thinking level</strong>
-                    <small>Standard</small>
+                    <small id="selectedThinkingLabel">Normal</small>
                   </span>
-                  <span>›</span>
+                  <span class="thinking-arrow">&rsaquo;</span>
+                </button>
+                <div class="thinking-menu" id="thinkingMenu">
+                  <button class="thinking-option active" type="button" data-thinking="normal">
+                    <span class="thinking-check">✓</span>
+                    <span>Normal</span>
+                  </button>
+                  <button class="thinking-option" type="button" data-thinking="medium">
+                    <span class="thinking-check"></span>
+                    <span>Medium</span>
+                  </button>
+                  <button class="thinking-option" type="button" data-thinking="high">
+                    <span class="thinking-check"></span>
+                    <span>High</span>
+                  </button>
+                  <button class="thinking-option" type="button" data-thinking="highest">
+                    <span class="thinking-check"></span>
+                    <span>Highest</span>
+                  </button>
                 </div>
               </div>
             </div>

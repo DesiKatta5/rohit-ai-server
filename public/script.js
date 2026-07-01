@@ -9,21 +9,38 @@ const welcomeText = document.getElementById("welcomeText");
 const modelPickerButton = document.getElementById("modelPickerButton");
 const modelMenu = document.getElementById("modelMenu");
 const selectedModelLabel = document.getElementById("selectedModelLabel");
+const thinkingToggle = document.getElementById("thinkingToggle");
+const thinkingMenu = document.getElementById("thinkingMenu");
+const selectedThinkingLabel = document.getElementById("selectedThinkingLabel");
+const app = document.querySelector(".app");
+const sidebar = document.getElementById("appSidebar");
+const sidebarToggle = document.getElementById("sidebarToggle");
+const mobileMenuButton = document.getElementById("mobileMenuButton");
 
 const themes = ["theme-light", "theme-dark", "theme-blue", "theme-green", "theme-dark-blue", "theme-dark-red"];
+const mobileSidebarQuery = window.matchMedia("(max-width: 760px)");
 const nyxoModels = {
   "nyxo-1.3": "NYXO 1.3",
   "nyxo-flash": "NYXO Flash",
   "nyxo-pro": "NYXO Pro",
   "nyxo-beta": "NYXO Beta"
 };
+const thinkingLevels = {
+  normal: "Normal",
+  medium: "Medium",
+  high: "High",
+  highest: "Highest"
+};
 const chatStorageKey = "nyxoChatHistory";
+const signInHistoryText = "Log in to see saved chats";
 let currentChatId = null;
 let autoThemeTimer = null;
 let attachedImage = null;
 let selectedModelKey = localStorage.getItem("nyxoModel") || "nyxo-flash";
+let selectedThinkingLevel = localStorage.getItem("nyxoThinkingLevel") || "normal";
 let recognition = null;
 let isListening = false;
+let activeUser = null;
 
 function setTheme(themeName, saveChoice = true) {
   document.body.classList.remove(...themes);
@@ -38,6 +55,75 @@ function setTheme(themeName, saveChoice = true) {
 
 function toggleThemes() {
   themeMenu.classList.toggle("open");
+}
+
+function isMobileSidebar() {
+  return mobileSidebarQuery.matches;
+}
+
+function syncSidebarButtons() {
+  const sidebarIsOpen = app.classList.contains("sidebar-open");
+  const sidebarIsCollapsed = app.classList.contains("sidebar-collapsed");
+  const expanded = isMobileSidebar() ? sidebarIsOpen : !sidebarIsCollapsed;
+
+  if (sidebarToggle) {
+    sidebarToggle.setAttribute("aria-expanded", String(expanded));
+    sidebarToggle.setAttribute("aria-label", expanded ? "Collapse sidebar" : "Open sidebar");
+  }
+
+  if (mobileMenuButton) {
+    mobileMenuButton.setAttribute("aria-expanded", String(expanded));
+    mobileMenuButton.setAttribute("aria-label", expanded ? "Close sidebar" : "Open sidebar");
+  }
+}
+
+function closeSidebar() {
+  if (isMobileSidebar()) {
+    app.classList.remove("sidebar-open");
+  } else {
+    app.classList.add("sidebar-collapsed");
+  }
+
+  syncSidebarButtons();
+}
+
+function openSidebar() {
+  if (isMobileSidebar()) {
+    app.classList.add("sidebar-open");
+    app.classList.remove("sidebar-collapsed");
+  } else {
+    app.classList.remove("sidebar-collapsed");
+  }
+
+  syncSidebarButtons();
+}
+
+function toggleSidebar() {
+  if (isMobileSidebar()) {
+    if (app.classList.contains("sidebar-open")) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
+
+    return;
+  }
+
+  if (app.classList.contains("sidebar-collapsed")) {
+    openSidebar();
+  } else {
+    closeSidebar();
+  }
+}
+
+function handleSidebarViewportChange() {
+  app.classList.remove("sidebar-open");
+
+  if (isMobileSidebar()) {
+    app.classList.remove("sidebar-collapsed");
+  }
+
+  syncSidebarButtons();
 }
 
 function startAutoTheme() {
@@ -101,7 +187,8 @@ async function sendMessage() {
       body: JSON.stringify({
         message: userText,
         image: image,
-        modelKey: selectedModelKey
+        modelKey: selectedModelKey,
+        thinkingLevel: selectedThinkingLevel
       })
     });
 
@@ -188,8 +275,37 @@ function setModel(modelKey) {
     button.querySelector(".model-check").textContent = isActive ? "✓" : "";
   });
 
+  thinkingMenu.classList.remove("open");
+  thinkingToggle.classList.remove("open");
+  thinkingToggle.setAttribute("aria-expanded", "false");
   modelMenu.classList.remove("open");
   modelPickerButton.setAttribute("aria-expanded", "false");
+}
+
+function setThinkingLevel(levelKey, closeMenu = true) {
+  if (!thinkingLevels[levelKey]) return;
+
+  selectedThinkingLevel = levelKey;
+  localStorage.setItem("nyxoThinkingLevel", levelKey);
+  selectedThinkingLabel.textContent = thinkingLevels[levelKey];
+
+  document.querySelectorAll(".thinking-option").forEach((button) => {
+    const isActive = button.dataset.thinking === levelKey;
+    button.classList.toggle("active", isActive);
+    button.querySelector(".thinking-check").textContent = isActive ? "✓" : "";
+  });
+
+  if (closeMenu) {
+    thinkingMenu.classList.remove("open");
+    thinkingToggle.classList.remove("open");
+    thinkingToggle.setAttribute("aria-expanded", "false");
+  }
+}
+
+function toggleThinkingMenu() {
+  const isOpen = thinkingMenu.classList.toggle("open");
+  thinkingToggle.classList.toggle("open", isOpen);
+  thinkingToggle.setAttribute("aria-expanded", String(isOpen));
 }
 
 function toggleModelMenu() {
@@ -303,15 +419,27 @@ function closeHistory() {
 }
 
 function getSavedChats() {
+  const storageKey = getUserChatStorageKey();
+
+  if (!storageKey) return [];
+
   try {
-    return JSON.parse(localStorage.getItem(chatStorageKey)) || [];
+    return JSON.parse(localStorage.getItem(storageKey)) || [];
   } catch (err) {
     return [];
   }
 }
 
 function setSavedChats(chats) {
-  localStorage.setItem(chatStorageKey, JSON.stringify(chats));
+  const storageKey = getUserChatStorageKey();
+
+  if (!storageKey) return;
+
+  localStorage.setItem(storageKey, JSON.stringify(chats));
+}
+
+function getUserChatStorageKey() {
+  return activeUser?.uid ? `${chatStorageKey}:${activeUser.uid}` : null;
 }
 
 function createChat(firstMessage) {
@@ -327,6 +455,8 @@ function createChat(firstMessage) {
 }
 
 function saveMessage(role, text, image = null) {
+  if (!activeUser) return;
+
   try {
     const chats = getSavedChats();
     let chat = chats.find((item) => item.id === currentChatId);
@@ -361,6 +491,8 @@ function startNewChat() {
 }
 
 function openSavedChat(chatId) {
+  if (!activeUser) return;
+
   const chat = getSavedChats().find((item) => item.id === chatId);
   if (!chat) return;
 
@@ -374,10 +506,33 @@ function openSavedChat(chatId) {
   closeHistory();
 }
 
+function deleteSavedChat(chatId) {
+  if (!activeUser) return;
+
+  const chats = getSavedChats().filter((item) => item.id !== chatId);
+  setSavedChats(chats);
+
+  if (currentChatId === chatId) {
+    currentChatId = null;
+  }
+
+  renderRecentChats();
+  loadHistory();
+}
+
 function renderRecentChats() {
   if (!recentChats) return;
 
-  recentChats.querySelectorAll("button").forEach((button) => button.remove());
+  recentChats.querySelectorAll(".chat-row, button").forEach((item) => item.remove());
+
+  if (!activeUser) {
+    const empty = document.createElement("button");
+    empty.type = "button";
+    empty.disabled = true;
+    empty.innerText = signInHistoryText;
+    recentChats.appendChild(empty);
+    return;
+  }
 
   const chats = getSavedChats().slice(0, 8);
 
@@ -391,17 +546,38 @@ function renderRecentChats() {
   }
 
   chats.forEach((chat) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.innerText = chat.title || "Untitled chat";
-    button.addEventListener("click", () => openSavedChat(chat.id));
-    recentChats.appendChild(button);
+    const row = document.createElement("div");
+    row.className = "chat-row";
+
+    const openButton = document.createElement("button");
+    openButton.type = "button";
+    openButton.className = "chat-open";
+    openButton.innerText = chat.title || "Untitled chat";
+    openButton.addEventListener("click", () => openSavedChat(chat.id));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "chat-delete";
+    deleteButton.innerText = "x";
+    deleteButton.setAttribute("aria-label", `Delete ${chat.title || "chat"}`);
+    deleteButton.addEventListener("click", () => deleteSavedChat(chat.id));
+
+    row.append(openButton, deleteButton);
+    recentChats.appendChild(row);
   });
 }
 
 function loadHistory() {
   const historyList = document.getElementById("historyList");
   historyList.innerHTML = "";
+
+  if (!activeUser) {
+    const empty = document.createElement("div");
+    empty.className = "history-item history-empty";
+    empty.innerText = signInHistoryText;
+    historyList.appendChild(empty);
+    return;
+  }
 
   const chats = getSavedChats();
 
@@ -416,8 +592,21 @@ function loadHistory() {
   chats.forEach((chat) => {
     const div = document.createElement("div");
     div.className = "history-item";
-    div.innerText = chat.title || "Untitled chat";
-    div.addEventListener("click", () => openSavedChat(chat.id));
+
+    const openButton = document.createElement("button");
+    openButton.type = "button";
+    openButton.className = "history-open";
+    openButton.innerText = chat.title || "Untitled chat";
+    openButton.addEventListener("click", () => openSavedChat(chat.id));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "history-delete";
+    deleteButton.innerText = "Delete";
+    deleteButton.setAttribute("aria-label", `Delete ${chat.title || "chat"}`);
+    deleteButton.addEventListener("click", () => deleteSavedChat(chat.id));
+
+    div.append(openButton, deleteButton);
     historyList.appendChild(div);
   });
 }
@@ -427,6 +616,7 @@ function renderAccount(user) {
   if (!accountArea) return;
 
   if (user) {
+    activeUser = user;
     const photo = user.photoURL || "logo.png";
     const name = user.displayName || user.email || "Nyxo user";
     const firstName = name.split(" ")[0].split("@")[0];
@@ -445,6 +635,8 @@ function renderAccount(user) {
       </div>
     `;
   } else {
+    activeUser = null;
+    currentChatId = null;
     welcomeText.textContent = "Welcome. What's going on?";
     accountArea.innerHTML = `
       <button class="login-btn" onclick="openLogin()" id="loginButton" type="button">
@@ -452,6 +644,8 @@ function renderAccount(user) {
       </button>
     `;
   }
+
+  renderRecentChats();
 }
 
 micBtn.addEventListener("click", toggleVoiceInput);
@@ -465,6 +659,16 @@ imageInput.addEventListener("change", () => {
 });
 
 modelPickerButton.addEventListener("click", toggleModelMenu);
+thinkingToggle.addEventListener("click", toggleThinkingMenu);
+
+sidebarToggle.addEventListener("click", toggleSidebar);
+mobileMenuButton.addEventListener("click", toggleSidebar);
+
+if (mobileSidebarQuery.addEventListener) {
+  mobileSidebarQuery.addEventListener("change", handleSidebarViewportChange);
+} else {
+  mobileSidebarQuery.addListener(handleSidebarViewportChange);
+}
 
 document.querySelectorAll(".model-option").forEach((button) => {
   button.addEventListener("click", () => {
@@ -472,10 +676,35 @@ document.querySelectorAll(".model-option").forEach((button) => {
   });
 });
 
+document.querySelectorAll(".thinking-option").forEach((button) => {
+  button.addEventListener("click", () => {
+    setThinkingLevel(button.dataset.thinking);
+  });
+});
+
 document.addEventListener("click", (event) => {
   if (!modelMenu.contains(event.target) && !modelPickerButton.contains(event.target)) {
     modelMenu.classList.remove("open");
     modelPickerButton.setAttribute("aria-expanded", "false");
+    thinkingMenu.classList.remove("open");
+    thinkingToggle.classList.remove("open");
+    thinkingToggle.setAttribute("aria-expanded", "false");
+  }
+
+  if (
+    isMobileSidebar() &&
+    app.classList.contains("sidebar-open") &&
+    sidebar &&
+    !sidebar.contains(event.target) &&
+    !mobileMenuButton.contains(event.target)
+  ) {
+    closeSidebar();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && app.classList.contains("sidebar-open")) {
+    closeSidebar();
   }
 });
 
@@ -500,7 +729,9 @@ window.addEventListener("load", () => {
 
   renderRecentChats();
   setModel(nyxoModels[selectedModelKey] ? selectedModelKey : "nyxo-flash");
+  setThinkingLevel(thinkingLevels[selectedThinkingLevel] ? selectedThinkingLevel : "normal", false);
   setupVoiceInput();
+  syncSidebarButtons();
 
   if (window.firebase) {
     firebase.auth().onAuthStateChanged(renderAccount);
