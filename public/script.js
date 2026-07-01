@@ -118,9 +118,39 @@ async function googleLogin() {
 
     const user = result.user;
 
-    alert("Welcome " + user.displayName);
-
     closeLogin();
+
+    // REMOVE LOGIN BUTTON
+    document.getElementById("loginButton").style.display = "none";
+
+    // SHOW ACCOUNT NAME
+    document.getElementById("accountArea").innerHTML = `
+
+<div class="account-wrapper">
+
+  <div class="account-box" onclick="toggleAccountMenu()">
+
+    <img src="${user.photoURL}" class="account-pfp">
+
+    <span>${user.displayName}</span>
+
+  </div>
+
+  <div class="account-menu" id="accountMenu">
+
+    <button onclick="changeAccount()">
+      Change Account
+    </button>
+
+    <button onclick="logout()">
+      Logout
+    </button>
+
+  </div>
+
+</div>
+
+`;
 
   } catch (error) {
 
@@ -129,5 +159,34 @@ async function googleLogin() {
     alert("Google login failed");
 
   }
+
+}
+function toggleAccountMenu() {
+
+  const menu = document.getElementById("accountMenu");
+
+  if (menu.style.display === "block") {
+
+    menu.style.display = "none";
+
+  } else {
+
+    menu.style.display = "block";
+
+  }
+
+}
+async function logout() {
+
+  await firebase.auth().signOut();
+
+  location.reload();
+
+}
+async function changeAccount() {
+
+  await firebase.auth().signOut();
+
+  openLogin();
 
 }
