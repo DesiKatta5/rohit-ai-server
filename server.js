@@ -88,12 +88,6 @@ res.json({
   reply: completion.choices[0].message.content
 });
 
-const completion = await groq.chat.completions.create({
-  messages: messages,
-  model: "llama-3.3-70b-versatile"
-});
-
-
 
 } catch (error) {
 
