@@ -406,3 +406,165 @@ body.theme-purple {
 .ai {
   scrollbar-width: none;
 }
+.bottom-login {
+  position: fixed;
+
+  left: 20px;
+  bottom: 20px;
+
+  z-index: 9999;
+}
+.login-btn {
+  padding: 14px 22px;
+
+  border: none;
+  border-radius: 16px;
+
+  background: #00ffff;
+  color: black;
+
+  font-weight: bold;
+  font-size: 15px;
+
+  cursor: pointer;
+
+  box-shadow: 0 0 20px #00ffff66;
+
+  transition: 0.3s;
+}
+
+.login-btn:hover {
+  transform: scale(1.05);
+}
+/* POPUP BACKGROUND */
+.login-popup {
+  display: none;
+
+  position: fixed;
+  inset: 0;
+
+  background: rgba(0,0,0,0.7);
+
+  justify-content: center;
+  align-items: center;
+
+  z-index: 99999;
+
+  backdrop-filter: blur(6px);
+}
+
+/* LOGIN BOX */
+.login-box {
+  width: 340px;
+
+  background: #111;
+
+  border: 1px solid #00ffff33;
+
+  border-radius: 24px;
+
+  padding: 28px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 14px;
+
+  box-shadow: 0 0 30px #00ffff22;
+
+  animation: popupAnim 0.25s ease;
+}
+
+/* TITLE */
+.login-box h2 {
+  text-align: center;
+  color: white;
+  margin-bottom: 10px;
+}
+
+/* INPUTS */
+.login-box input {
+  padding: 14px;
+
+  border: none;
+  border-radius: 14px;
+
+  background: #1a1a1a;
+  color: white;
+
+  outline: none;
+}
+
+/* MAIN LOGIN */
+.main-login-btn {
+  padding: 14px;
+
+  border: none;
+  border-radius: 14px;
+
+  background: #00ffff;
+  color: black;
+
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* DIVIDER */
+.divider {
+  text-align: center;
+  color: #888;
+  font-size: 14px;
+}
+
+/* GOOGLE BUTTON */
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  padding: 14px;
+
+  border: none;
+  border-radius: 14px;
+
+  background: white;
+  color: black;
+
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* GOOGLE ICON */
+.google-btn img {
+  width: 20px;
+  height: 20px;
+}
+
+/* CLOSE */
+.close-btn {
+  background: #222;
+  color: white;
+
+  border: none;
+  border-radius: 14px;
+
+  padding: 12px;
+
+  cursor: pointer;
+}
+
+/* POPUP ANIMATION */
+@keyframes popupAnim {
+
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+}

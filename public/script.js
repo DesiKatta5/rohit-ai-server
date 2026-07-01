@@ -92,3 +92,42 @@ window.onload = () => {
     document.body.classList.add("theme-neon");
   }
 };
+function openLogin() {
+  document.getElementById("loginPopup").style.display = "flex";
+}
+
+function closeLogin() {
+  document.getElementById("loginPopup").style.display = "none";
+}
+async function login() {
+
+  const gmail = document.getElementById("gmail").value;
+
+  const password = document.getElementById("password").value;
+
+  alert("Login button working");
+
+}
+async function googleLogin() {
+
+  const provider = new firebase.auth.GoogleAuthProvider();
+
+  try {
+
+    const result = await firebase.auth().signInWithPopup(provider);
+
+    const user = result.user;
+
+    alert("Welcome " + user.displayName);
+
+    closeLogin();
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert("Google login failed");
+
+  }
+
+}

@@ -3,7 +3,7 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta charset="UTF-8">
-<title>NexAI</title>
+<title>NyxoGPT</title>
 <link rel="stylesheet" href="style.css">
 <link rel="icon" type="image/png" href="logo.png">
 </head>
@@ -13,8 +13,9 @@
 <div class="app">
 
   <!-- SIDEBAR -->
+
   <div class="sidebar">   
-    <div class="header">NEX-GPT
+    <div class="header">NyxoGPT
   <img src="logo.png" class="logo">
 </div>
     
@@ -23,14 +24,19 @@
 <button class="theme-btn" onclick="setTheme('theme-green', this)">Green</button>
 <button class="theme-btn" onclick="setTheme('theme-purple', this)">Purple</button>
 
-    <div class="footer">MR ROHIT AI</div>
+    <div class="footer">Powered By Rohit</div>
+    <div class="bottom-login">
+  <button class="login-btn" onclick="openLogin()">
+    Login
+  </button>
+</div>
   </div>
   
 
   <!-- MAIN -->
   <div class="main">
 
-    <div class="header">🔥 NexAI</div>
+    <div class="header">🔥 NyxoGPT</div>
 
     <div id="chatBox"></div>
 
@@ -45,5 +51,58 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="script.js"></script>
 
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+
+<script>
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAFnJyCI8Y5MzxMYeVLSCgkm5sFVZLEmFs",
+  authDomain: "nex-gpt-ai.firebaseapp.com",
+  projectId: "nex-gpt-ai",
+  storageBucket: "nex-gpt-ai.firebasestorage.app",
+  messagingSenderId: "90044437595",
+  appId: "1:90044437595:web:54c1748660d584e76bdb7e",
+  measurementId: "G-ZQCCQ5KF7W"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+</script>
+
+<div id="loginPopup" class="login-popup">
+
+  <div class="login-box">
+
+    <h2>Login to NEX-GPT</h2>
+
+    <input type="email" id="gmail" placeholder="Enter Gmail">
+
+    <input type="password" id="password" placeholder="Enter Password">
+
+    <button class="main-login-btn" onclick="login()">
+      Login
+    </button>
+
+    <div class="divider">
+      OR
+    </div>
+
+    <button class="google-btn" onclick="googleLogin()">
+
+      <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg">
+
+      Continue with Google
+
+    </button>
+
+    <button class="close-btn" onclick="closeLogin()">
+      Close
+    </button>
+
+  </div>
+
+</div>
 </body>
 </html>
