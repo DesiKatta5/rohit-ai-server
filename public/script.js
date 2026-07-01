@@ -37,6 +37,10 @@ function addMessage(type, text) {
 
 async function sendMessage() {
   const msg = input.value.trim();
+  const userMessage = input.value;
+
+saveChat(userMessage);
+  
   if (!msg) return;
 
   addMessage("user", msg);
@@ -56,6 +60,7 @@ async function sendMessage() {
     addMessage("ai", "Connection Error");
   }
 }
+
 
 /* EVENTS */
 sendBtn.onclick = sendMessage;
@@ -124,33 +129,7 @@ async function googleLogin() {
     document.getElementById("loginButton").style.display = "none";
 
     // SHOW ACCOUNT NAME
-    document.getElementById("accountArea").innerHTML = `
-
-<div class="account-wrapper">
-
-  <div class="account-box" onclick="toggleAccountMenu()">
-
-    <img src="${user.photoURL}" class="account-pfp">
-
-    <span>${user.displayName}</span>
-
-  </div>
-
-  <div class="account-menu" id="accountMenu">
-
-    <button onclick="changeAccount()">
-      Change Account
-    </button>
-
-    <button onclick="logout()">
-      Logout
-    </button>
-
-  </div>
-
-</div>
-
-`;
+    
 
   } catch (error) {
 
@@ -190,3 +169,153 @@ async function changeAccount() {
   openLogin();
 
 }
+
+function toggleThemes() {
+
+  const menu = document.getElementById("themeMenu");
+
+  if (menu.style.display === "block") {
+
+    menu.style.display = "none";
+
+  } else {
+
+    menu.style.display = "block";
+
+  }
+
+}
+
+function setTheme(themeName) {
+
+  document.body.className = themeName;
+
+  localStorage.setItem("theme", themeName);
+
+}
+function openHistory() {
+
+  const user = firebase.auth().currentUser;
+
+  // USER NOT LOGGED IN
+  if (!user) {
+
+    openLogin();
+
+    alert("Login first to use history");
+
+    return;
+  }
+
+  document.getElementById("historyPopup").style.display = "flex";
+
+  loadHistory();
+
+}
+
+function closeHistory() {
+
+  document.getElementById("historyPopup").style.display = "none";
+
+}
+function saveChat(message) {
+
+  try {
+
+    const user = firebase.auth().currentUser;
+
+    // STOP IF NOT LOGGED IN
+    if (!user) return;
+
+    let chats = JSON.parse(localStorage.getItem("chatHistory")) || [];
+
+    chats.push(message);
+
+    localStorage.setItem("chatHistory", JSON.stringify(chats));
+
+  } catch (err) {
+
+    console.log("History save error:", err);
+
+  }
+
+}
+function loadHistory() {
+
+  const historyList = document.getElementById("historyList");
+
+  historyList.innerHTML = "";
+
+  let chats = JSON.parse(localStorage.getItem("chatHistory")) || [];
+
+  chats.forEach(chat => {
+
+    const div = document.createElement("div");
+
+    div.className = "history-item";
+
+    // FIRST MESSAGE TITLE
+    div.innerText = chat.substring(0, 40);
+
+    historyList.appendChild(div);
+
+  });
+
+}
+window.addEventListener("load", () => {
+
+  firebase.auth().onAuthStateChanged((user) => {
+
+    const accountArea = document.getElementById("accountArea");
+
+    if (!accountArea) return;
+
+    // USER LOGGED IN
+    if (user) {
+
+      accountArea.innerHTML = `
+
+        <div class="account-wrapper">
+
+          <div class="account-box" onclick="toggleAccountMenu()">
+
+            <img src="${user.photoURL}" class="account-pfp">
+
+            <span>${user.displayName}</span>
+
+          </div>
+
+          <div class="account-menu" id="accountMenu">
+
+            <button onclick="changeAccount()">
+              Change Account
+            </button>
+
+            <button onclick="logout()">
+              Logout
+            </button>
+
+          </div>
+
+        </div>
+
+      `;
+
+    }
+
+    // USER LOGGED OUT
+    else {
+
+      accountArea.innerHTML = `
+
+        <button class="login-btn" onclick="openLogin()" id="loginButton">
+          Login
+        </button>
+
+      `;
+
+    }
+
+  });
+
+});

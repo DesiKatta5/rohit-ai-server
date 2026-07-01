@@ -665,3 +665,187 @@ body.theme-purple {
   }
 
 }
+/* THEME BUTTON */
+.theme-toggle {
+  position: fixed;
+
+  bottom: 88px;
+  left: 20px;
+
+  z-index: 99999;
+}
+
+/* MAIN BUTTON */
+.theme-main-btn {
+  padding: 12px 18px;
+
+  border: none;
+  border-radius: 14px;
+
+  background: #00ffff;
+  color: black;
+
+  font-weight: bold;
+
+  cursor: pointer;
+
+  box-shadow: 0 0 20px #00ffff55;
+}
+
+/* THEME MENU */
+.theme-menu {
+  display: none;
+
+  margin-top: 10px;
+
+  background: #111;
+
+  border-radius: 18px;
+
+  padding: 10px;
+
+  width: 160px;
+
+  box-shadow: 0 0 25px #00ffff22;
+}
+
+/* MENU BUTTONS */
+.theme-menu button {
+  width: 100%;
+
+  margin-top: 8px;
+
+  padding: 12px;
+
+  border: none;
+  border-radius: 12px;
+
+  background: #1a1a1a;
+  color: white;
+
+  cursor: pointer;
+}
+
+.theme-menu button:hover {
+  background: #00ffff;
+  color: black;
+}
+@media (max-width: 768px) {
+
+  .theme-toggle {
+
+    top: auto !important;
+
+    bottom: 700px;
+
+    right: -270px;
+
+  }
+
+}
+@media (max-width: 768px) {
+
+  .theme-menu {
+
+    position: absolute;
+
+    top: 75px;
+    bottom: auto !important;
+
+    left: 220px;
+
+    width: 170px;
+
+    display: none;
+  }
+
+}
+/* HISTORY BUTTON */
+.history-toggle {
+  position: fixed;
+
+  left: 20px;
+  bottom: 150px;
+
+  z-index: 99999;
+}
+
+.history-btn {
+  padding: 12px 18px;
+
+  border: none;
+  border-radius: 14px;
+
+  background: #00ffff;
+  color: black;
+
+  font-weight: bold;
+
+  cursor: pointer;
+
+  box-shadow: 0 0 20px #00ffff55;
+}
+
+/* POPUP */
+.history-popup {
+  display: none;
+
+  position: fixed;
+  inset: 0;
+
+  background: rgba(0,0,0,0.7);
+
+  z-index: 999999;
+
+  justify-content: center;
+  align-items: center;
+
+  backdrop-filter: blur(5px);
+}
+
+/* BOX */
+.history-box {
+  width: 400px;
+  max-height: 80vh;
+
+  overflow-y: auto;
+
+  background: #111;
+
+  border-radius: 20px;
+
+  padding: 20px;
+
+  box-shadow: 0 0 30px #00ffff33;
+}
+
+/* HEADER */
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  color: white;
+}
+
+/* CHAT ITEM */
+.history-item {
+  background: #1a1a1a;
+
+  padding: 14px;
+
+  border-radius: 14px;
+
+  margin-top: 12px;
+
+  color: white;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+.history-item:hover {
+  background: #00ffff;
+  color: black;
+}
