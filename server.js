@@ -52,22 +52,32 @@ if (
 
 try {
 
-const userMessage =
-  req.body.message;
+const messages = [
+  {
+    role: "system",
+    content: `
+You are NEX-GPT.
 
-const completion =
-  await groq.chat.completions.create({
+Always respond in clean markdown formatting.
 
-    model: "llama-3.3-70b-versatile",
+Use:
+- headings
+- bullet points
+- spacing
+- code blocks
+- separate paragraphs
+- Put every step on a new line.
+- Use markdown numbered lists properly.
+- Keep steps short and separated.
 
-    messages: [
-      {
-        role: "user",
-        content: userMessage
-      }
-    ]
-
-  });
+Never write everything in one paragraph.
+`
+  },
+  {
+    role: "user",
+    content: userMessage
+  }
+];
 
 const aiReply =
   completion.choices[0].message.content;

@@ -20,19 +20,19 @@ function typeWriter(element, text, speed = 80) {
 }
 
 function addMessage(type, text) {
+
   const div = document.createElement("div");
   div.className = type;
 
   if (type === "ai") {
-    chatBox.appendChild(div);
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    typeWriter(div, text, 60); // 🔥 typing effect here
+    div.innerHTML = marked.parse(text);
   } else {
     div.textContent = text;
-    chatBox.appendChild(div);
-    chatBox.scrollTop = chatBox.scrollHeight;
   }
+
+  chatBox.appendChild(div);
+
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 async function sendMessage() {

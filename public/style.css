@@ -6,20 +6,22 @@
 }
 
 html, body {
+  margin: 0;
+  padding: 0;
+
   width: 100%;
   height: 100%;
+
   overflow: hidden;
-  font-family: Arial, sans-serif;
-  transition: 0.4s ease;
 }
 
 /* APP LAYOUT */
 .app {
   display: flex;
-  width: 100%;
   height: 100vh;
-}
 
+  overflow: hidden;
+}
 /* SIDEBAR */
 .sidebar {
   width: 240px;
@@ -59,9 +61,11 @@ html, body {
 /* MAIN AREA */
 .main {
   flex: 1;
+
   display: flex;
   flex-direction: column;
-  height: 100vh;
+
+  min-height: 0;
 }
 
 /* HEADER */
@@ -76,11 +80,18 @@ html, body {
 /* CHAT BOX */
 #chatBox {
   flex: 1;
+
   overflow-y: auto;
-  padding: 15px;
+  overflow-x: hidden;
+
+  min-height: 0;
+
+  padding: 10px;
+
   display: flex;
   flex-direction: column;
-  gap: 10px;
+
+  -webkit-overflow-scrolling: touch;
 }
 
 /* MESSAGES */
@@ -108,9 +119,13 @@ html, body {
 /* INPUT AREA */
 .input-area {
   display: flex;
+  gap: 10px;
   padding: 10px;
-  background: #0a0a0a;
-  border-top: 1px solid #222;
+  background: #111;
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  z-index: 100;
 }
 
 input {
@@ -222,16 +237,15 @@ body.theme-purple {
     width: 100%;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
   }
 
   /* FIX CHAT DISAPPEARING */
-  #chatBox {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
+#chatBox {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  scroll-behavior: smooth;
+}
 
   /* prevent header jumping to center */
   .header {
@@ -251,4 +265,144 @@ body.theme-purple {
   margin-right: 8px;
   border-radius: 50%;
   box-shadow: 0 0 10px #00f7ff;
+}
+@media (max-width: 768px) {
+
+  html, body {
+    height: 100dvh;
+  }
+
+  .app {
+    height: 100dvh;
+  }
+
+  
+
+}
+/* AI MESSAGE */
+.ai {
+  background: #111;
+  color: #eaeaea;
+
+  padding: 18px;
+  margin: 12px;
+
+  border-radius: 18px;
+  border: 1px solid #222;
+
+  line-height: 1.7;
+
+  max-width: 95%;
+
+
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+/* HEADINGS */
+.ai h1,
+.ai h2,
+.ai h3 {
+  color: white;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+/* PARAGRAPHS */
+.ai p {
+  margin: 10px 0;
+}
+
+/* LISTS */
+.ai ul,
+.ai ol {
+  padding-left: 24px;
+}
+
+.ai li {
+  margin-bottom: 8px;
+}
+
+/* LINKS */
+.ai a {
+  color: #4da6ff;
+  text-decoration: none;
+}
+
+.ai a:hover {
+  text-decoration: underline;
+}
+
+/* INLINE CODE */
+.ai code {
+  background: #1e1e1e;
+  color: #00ffff;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: monospace;
+}
+
+/* CODE BLOCKS */
+.ai pre {
+  background: #1a1a1a;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid #333;
+}
+
+.ai pre code {
+  background: transparent;
+  padding: 0;
+  color: #00ffcc;
+}
+
+/* BLOCKQUOTE */
+.ai blockquote {
+  border-left: 4px solid #00ffff;
+  padding-left: 12px;
+  color: #ccc;
+  margin: 12px 0;
+}
+/* NUMBERED STEPS */
+.ai ol {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-left: 0;
+  margin-left: 0;
+}
+
+/* EACH STEP CARD */
+.ai ol li {
+  list-style-position: inside;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 14px;
+  padding: 14px;
+  line-height: 1.6;
+}
+
+/* BULLET BLOCKS */
+.ai ul li {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+  list-style-position: inside;
+}
+.ai pre {
+  white-space: pre-wrap;
+}
+.ai pre {
+  overflow-x: auto;
+  white-space: pre-wrap;
+  max-width: 100%;
+}
+/* Hide scrollbars */
+.ai::-webkit-scrollbar {
+  display: none;
+}
+
+.ai {
+  scrollbar-width: none;
 }
