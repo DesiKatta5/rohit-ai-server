@@ -79,11 +79,18 @@ Never write everything in one paragraph.
   }
 ];
 
-const aiReply =
-  completion.choices[0].message.content;
+const completion = await groq.chat.completions.create({
+  messages: messages,
+  model: "llama-3.3-70b-versatile"
+});
 
 res.json({
-  reply: aiReply
+  reply: completion.choices[0].message.content
+});
+
+const completion = await groq.chat.completions.create({
+  messages: messages,
+  model: "llama-3.3-70b-versatile"
 });
 
 
