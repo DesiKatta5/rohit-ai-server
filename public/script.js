@@ -1,6 +1,9 @@
 const input = document.getElementById("userInput");
 const chatBox = document.getElementById("chatBox");
 const micBtn = document.getElementById("micBtn");
+const voiceChatBtn = document.getElementById("voiceChatBtn");
+const voiceOrbPanel = document.getElementById("voiceOrbPanel");
+const voiceOrbStatus = document.getElementById("voiceOrbStatus");
 const themeMenu = document.getElementById("themeMenu");
 const gameMenu = document.getElementById("gameMenu");
 const recentChats = document.getElementById("recentChats");
@@ -42,6 +45,10 @@ const games = {
   roblox: "Roblox",
   minecraft: "Minecraft"
 };
+const gameMentionPatterns = {
+  roblox: /\b(roblox|robux|blox|obby|brookhaven|bloxburg|doors|adopt me|studio|lua script|avatar)\b/i,
+  minecraft: /\b(minecraft|mcpe|bedrock|java edition|creeper|redstone|nether|ender|herobrine|minecart|crafting|survival mode)\b/i
+};
 let currentChatId = null;
 let autoThemeTimer = null;
 let attachedImage = null;
@@ -51,6 +58,19 @@ let selectedGameKey = localStorage.getItem("nyxoSelectedGame") || "";
 let openGamesAfterLogin = false;
 let recognition = null;
 let isListening = false;
+let voiceRecognition = null;
+let isVoiceModeActive = false;
+let isVoiceModeListening = false;
+let isVoiceModeBusy = false;
+let voiceTranscriptSent = false;
+let voiceAudioStream = null;
+let voiceAudioContext = null;
+let voiceAudioAnalyser = null;
+let voiceAudioData = null;
+let voiceAudioFrame = null;
+let voiceInterruptStartedAt = 0;
+let voiceReplyStartedAt = 0;
+let isCancellingVoiceReply = false;
 let activeUser = null;
 
 function setTheme(themeName, saveChoice = true) {
@@ -335,6 +355,14 @@ function isEnhancementPrompt(message) {
   return /\b(enhance|improve|make better|fix|retouch|restore|upscale|clear|clarity|sharpen|denoise|brighten|color correct|colour correct|quality|beautify|clean up|photo edit)\b/i.test(text);
 }
 
+function getGameKeyForMessage(message) {
+  if (!activeUser || !selectedGameKey || !gameMentionPatterns[selectedGameKey]) {
+    return "";
+  }
+
+  return gameMentionPatterns[selectedGameKey].test(message) ? selectedGameKey : "";
+}
+
 function clampColor(value) {
   return Math.max(0, Math.min(255, value));
 }
@@ -442,13 +470,9 @@ async function createEnhancedImage(image) {
   };
 }
 
-async function sendMessage() {
-  const msg = input.value.trim();
-  const image = attachedImage;
+async function requestAiReply(userText, image = null, options = {}) {
+  const { focusInput = true, speakReply = false } = options;
 
-  if (!msg && !image) return;
-
-  const userText = msg || "Uploaded an image";
   const enhancedImagePromise = image && isEnhancementPrompt(userText)
     ? createEnhancedImage(image).catch((error) => {
         console.error("Image enhancement error:", error);
@@ -458,9 +482,11 @@ async function sendMessage() {
 
   addMessage("user", userText, image);
   saveMessage("user", userText, image);
-  input.value = "";
-  clearAttachedImage();
-  input.focus();
+
+  if (focusInput) {
+    input.focus();
+  }
+
   const thinkingMessage = addThinkingMessage();
 
   try {
@@ -472,7 +498,7 @@ async function sendMessage() {
         image: image,
         modelKey: selectedModelKey,
         thinkingLevel: selectedThinkingLevel,
-        gameKey: activeUser ? selectedGameKey : ""
+        gameKey: getGameKeyForMessage(userText)
       })
     });
 
@@ -492,12 +518,36 @@ async function sendMessage() {
     thinkingMessage.remove();
     addMessage("ai", reply, responseImage, { typewriter: true });
     saveMessage("ai", reply, responseImage);
+
+    if (speakReply) {
+      speakAiReply(reply);
+    }
+
+    return reply;
   } catch (err) {
     const errorMessage = err.message || "Connection error. Please check the server and try again.";
     thinkingMessage.remove();
     addMessage("ai", errorMessage, null, { typewriter: true });
     saveMessage("ai", errorMessage);
+
+    if (speakReply) {
+      speakAiReply(errorMessage);
+    }
+
+    return errorMessage;
   }
+}
+
+async function sendMessage() {
+  const msg = input.value.trim();
+  const image = attachedImage;
+
+  if (!msg && !image) return;
+
+  const userText = msg || "Uploaded an image";
+  input.value = "";
+  clearAttachedImage();
+  await requestAiReply(userText, image, { focusInput: true });
 }
 
 function openImagePicker() {
@@ -611,6 +661,8 @@ function setupVoiceInput() {
   if (!SpeechRecognition) {
     micBtn.title = "Voice input is not supported in this browser";
     micBtn.classList.add("unsupported");
+    voiceChatBtn.title = "Voice chat is not supported in this browser";
+    voiceChatBtn.classList.add("unsupported");
     return;
   }
 
@@ -646,6 +698,8 @@ function setupVoiceInput() {
     input.value = transcript.trim();
     input.focus();
   };
+
+  setupVoiceChatRecognition(SpeechRecognition);
 }
 
 function toggleVoiceInput() {
@@ -658,6 +712,348 @@ function toggleVoiceInput() {
     recognition.stop();
   } else {
     recognition.start();
+  }
+}
+
+function setupVoiceChatRecognition(SpeechRecognition) {
+  voiceRecognition = new SpeechRecognition();
+  voiceRecognition.lang = "en-US";
+  voiceRecognition.interimResults = true;
+  voiceRecognition.continuous = false;
+
+  voiceRecognition.onstart = () => {
+    isVoiceModeListening = true;
+    voiceTranscriptSent = false;
+    document.body.classList.add("voice-mode-listening");
+    setVoiceStatus("Listening...");
+  };
+
+  voiceRecognition.onend = () => {
+    isVoiceModeListening = false;
+    document.body.classList.remove("voice-mode-listening", "voice-mode-speaking");
+
+    if (isVoiceModeActive && !isVoiceModeBusy) {
+      setVoiceStatus("Listening...");
+      window.setTimeout(startVoiceModeListening, 250);
+      return;
+    }
+
+    if (!isVoiceModeActive) {
+      setVoiceStatus("Voice mode off");
+    }
+  };
+
+  voiceRecognition.onerror = (event) => {
+    console.warn("Voice chat recognition error:", event.error);
+    isVoiceModeListening = false;
+    document.body.classList.remove("voice-mode-listening", "voice-mode-speaking");
+
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      stopVoiceMode();
+      alert("Please allow microphone access to use voice chat.");
+    }
+  };
+
+  voiceRecognition.onresult = (event) => {
+    let interimTranscript = "";
+    let finalTranscript = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript;
+      } else {
+        interimTranscript += transcript;
+      }
+    }
+
+    const visibleTranscript = (finalTranscript || interimTranscript).trim();
+
+    if (visibleTranscript) {
+      input.value = visibleTranscript;
+      setVoiceStatus(interimTranscript ? "Listening..." : "Sending...");
+    }
+
+    if (finalTranscript.trim() && !voiceTranscriptSent) {
+      voiceTranscriptSent = true;
+      handleVoiceMessage(finalTranscript.trim());
+    }
+  };
+}
+
+function setVoiceStatus(status) {
+  if (voiceOrbStatus) {
+    voiceOrbStatus.textContent = status;
+  }
+}
+
+function startVoiceModeListening() {
+  if (!voiceRecognition || !isVoiceModeActive || isVoiceModeBusy || isVoiceModeListening) {
+    return;
+  }
+
+  try {
+    voiceRecognition.start();
+  } catch (error) {
+    console.warn("Voice chat start skipped:", error);
+  }
+}
+
+function stopVoiceModeListening() {
+  if (voiceRecognition && isVoiceModeListening) {
+    try {
+      voiceRecognition.stop();
+    } catch (error) {
+      console.warn("Voice chat stop skipped:", error);
+    }
+  }
+}
+
+async function startVoiceAudioMeter() {
+  if (!navigator.mediaDevices?.getUserMedia || voiceAudioStream) {
+    return;
+  }
+
+  try {
+    voiceAudioStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+    voiceAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    voiceAudioAnalyser = voiceAudioContext.createAnalyser();
+    voiceAudioAnalyser.fftSize = 256;
+    voiceAudioData = new Uint8Array(voiceAudioAnalyser.frequencyBinCount);
+
+    const source = voiceAudioContext.createMediaStreamSource(voiceAudioStream);
+    source.connect(voiceAudioAnalyser);
+    updateVoiceAudioLevel();
+  } catch (error) {
+    console.warn("Voice audio meter unavailable:", error);
+  }
+}
+
+function updateVoiceAudioLevel() {
+  if (!voiceAudioAnalyser || !voiceAudioData || !isVoiceModeActive) {
+    return;
+  }
+
+  voiceAudioAnalyser.getByteFrequencyData(voiceAudioData);
+
+  const average = voiceAudioData.reduce((sum, value) => sum + value, 0) / voiceAudioData.length;
+  const level = Math.min(1, Math.max(0, average / 95));
+  document.documentElement.style.setProperty("--voice-level", level.toFixed(2));
+  detectVoiceReplyInterruption(level);
+
+  voiceAudioFrame = requestAnimationFrame(updateVoiceAudioLevel);
+}
+
+function detectVoiceReplyInterruption(level) {
+  const canInterrupt = isVoiceModeActive &&
+    isVoiceModeBusy &&
+    document.body.classList.contains("voice-mode-speaking") &&
+    window.speechSynthesis?.speaking &&
+    !isCancellingVoiceReply &&
+    performance.now() - voiceReplyStartedAt > 700;
+
+  if (!canInterrupt) {
+    voiceInterruptStartedAt = 0;
+    return;
+  }
+
+  if (level < 0.32) {
+    voiceInterruptStartedAt = 0;
+    return;
+  }
+
+  if (!voiceInterruptStartedAt) {
+    voiceInterruptStartedAt = performance.now();
+    return;
+  }
+
+  if (performance.now() - voiceInterruptStartedAt > 260) {
+    interruptVoiceReply();
+  }
+}
+
+function stopVoiceAudioMeter() {
+  if (voiceAudioFrame) {
+    cancelAnimationFrame(voiceAudioFrame);
+    voiceAudioFrame = null;
+  }
+
+  if (voiceAudioStream) {
+    voiceAudioStream.getTracks().forEach((track) => track.stop());
+    voiceAudioStream = null;
+  }
+
+  if (voiceAudioContext) {
+    voiceAudioContext.close().catch(() => {});
+    voiceAudioContext = null;
+  }
+
+  voiceAudioAnalyser = null;
+  voiceAudioData = null;
+  document.documentElement.style.setProperty("--voice-level", "0");
+}
+
+async function toggleVoiceMode() {
+  if (!voiceRecognition) {
+    alert("Voice chat is not supported in this browser.");
+    return;
+  }
+
+  if (isVoiceModeActive) {
+    stopVoiceMode();
+    return;
+  }
+
+  isVoiceModeActive = true;
+  voiceChatBtn.classList.add("active");
+  voiceChatBtn.setAttribute("aria-pressed", "true");
+  voiceOrbPanel.setAttribute("aria-hidden", "false");
+  document.body.classList.add("voice-mode-active");
+  setVoiceStatus("Listening...");
+
+  if (isListening && recognition) {
+    recognition.stop();
+  }
+
+  await startVoiceAudioMeter();
+  startVoiceModeListening();
+}
+
+function stopVoiceMode() {
+  isVoiceModeActive = false;
+  isVoiceModeBusy = false;
+  voiceTranscriptSent = false;
+
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+
+  stopVoiceModeListening();
+  stopVoiceAudioMeter();
+  voiceChatBtn.classList.remove("active");
+  voiceChatBtn.setAttribute("aria-pressed", "false");
+  voiceOrbPanel.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("voice-mode-active", "voice-mode-listening", "voice-mode-speaking", "voice-mode-thinking");
+  setVoiceStatus("Voice mode off");
+}
+
+async function handleVoiceMessage(transcript) {
+  if (!transcript || isVoiceModeBusy) return;
+
+  isVoiceModeBusy = true;
+  stopVoiceModeListening();
+  document.body.classList.remove("voice-mode-listening", "voice-mode-speaking");
+  document.body.classList.add("voice-mode-thinking");
+  setVoiceStatus("Thinking...");
+  input.value = "";
+
+  if (isSimpleVoiceGreeting(transcript)) {
+    respondToSimpleVoiceGreeting(transcript);
+    return;
+  }
+
+  await requestAiReply(transcript, null, {
+    focusInput: false,
+    speakReply: true
+  });
+}
+
+function isSimpleVoiceGreeting(text) {
+  const normalized = String(text || "")
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "")
+    .trim();
+
+  return /^(hi|hello|hey|helo|hii|hiya|yo|good morning|good afternoon|good evening)(\s+(nyxo|ai|assistant))?$/.test(normalized);
+}
+
+function respondToSimpleVoiceGreeting(transcript) {
+  const reply = "Hello! How can I help?";
+
+  addMessage("user", transcript);
+  saveMessage("user", transcript);
+  document.body.classList.remove("voice-mode-thinking");
+  addMessage("ai", reply, null, { typewriter: true });
+  saveMessage("ai", reply);
+  speakAiReply(reply);
+}
+
+function speakAiReply(text) {
+  if (!window.speechSynthesis || !isVoiceModeActive) {
+    finishVoiceReply();
+    return;
+  }
+
+  const plainText = String(text || "")
+    .replace(/```[\s\S]*?```/g, " code block omitted. ")
+    .replace(/[#*_>`~\[\]()]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!plainText) {
+    finishVoiceReply();
+    return;
+  }
+
+  const utterance = new SpeechSynthesisUtterance(plainText);
+  utterance.rate = 1;
+  utterance.pitch = 1.04;
+  utterance.volume = 1;
+
+  const voices = window.speechSynthesis.getVoices();
+  const preferredVoice = voices.find((voice) => /en/i.test(voice.lang) && /female|natural|zira|aria|jenny|samantha/i.test(voice.name))
+    || voices.find((voice) => /en/i.test(voice.lang));
+
+  if (preferredVoice) {
+    utterance.voice = preferredVoice;
+  }
+
+  utterance.onstart = () => {
+    voiceReplyStartedAt = performance.now();
+    isCancellingVoiceReply = false;
+    voiceInterruptStartedAt = 0;
+    document.body.classList.remove("voice-mode-thinking", "voice-mode-listening");
+    document.body.classList.add("voice-mode-speaking");
+    setVoiceStatus("Speaking...");
+  };
+
+  utterance.onend = finishVoiceReply;
+  utterance.onerror = finishVoiceReply;
+
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+
+function interruptVoiceReply() {
+  if (!window.speechSynthesis || isCancellingVoiceReply) return;
+
+  isCancellingVoiceReply = true;
+  voiceInterruptStartedAt = 0;
+  setVoiceStatus("Listening...");
+  window.speechSynthesis.cancel();
+  finishVoiceReply(true);
+}
+
+function finishVoiceReply() {
+  const wasInterrupted = isCancellingVoiceReply;
+
+  isVoiceModeBusy = false;
+  voiceTranscriptSent = false;
+  isCancellingVoiceReply = false;
+  voiceReplyStartedAt = 0;
+  voiceInterruptStartedAt = 0;
+  document.body.classList.remove("voice-mode-thinking", "voice-mode-speaking");
+
+  if (isVoiceModeActive) {
+    setVoiceStatus("Listening...");
+    window.setTimeout(startVoiceModeListening, wasInterrupted ? 120 : 350);
   }
 }
 
@@ -1016,6 +1412,7 @@ function renderAccount(user) {
 }
 
 micBtn.addEventListener("click", toggleVoiceInput);
+voiceChatBtn.addEventListener("click", toggleVoiceMode);
 
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter") sendMessage();
