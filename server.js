@@ -117,6 +117,28 @@ Concise answer rules:
 - Use bullet points only when they make the answer easier to read.
 `;
 
+const identityRules = `
+Identity rules:
+- Your public name is NyxoGPT.
+- If the user asks your name, model name, AI name, or what model you are, answer: "I am NyxoGPT."
+- Never call yourself NEX-GPT, Nex GPT, or nex-gpt.
+`;
+
+function cleanBrandName(text) {
+  return String(text || "")
+    .replace(/\bNEX-GPT\b/gi, "NyxoGPT")
+    .replace(/\bNex GPT\b/gi, "NyxoGPT")
+    .replace(/\bnex-gpt\b/gi, "NyxoGPT");
+}
+
+function isIdentityQuestion(message) {
+  const text = String(message || "").toLowerCase().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
+
+  return /\b(who are you|what are you)\b/.test(text) ||
+    /\b(your|ur)\s+(ai\s+)?(name|model|model name)\b/.test(text) ||
+    /\b(model|model name|ai name)\b/.test(text) && /\b(name|tell|say|what|which|give|show)\b/.test(text);
+}
+
 function extractSvg(text) {
   const match = String(text || "").match(/<svg[\s\S]*<\/svg>/i);
   return match ? match[0] : "";
@@ -145,6 +167,39 @@ function isImageEnhancementRequest(message) {
   return /\b(enhance|improve|make better|fix|retouch|restore|upscale|clear|clarity|sharpen|denoise|brighten|color correct|colour correct|quality|beautify|clean up|photo edit)\b/i.test(text);
 }
 
+function normalizeChatHistory(history, latestMessage = "") {
+  if (!Array.isArray(history)) return [];
+
+  const normalized = history
+    .slice(-14)
+    .map((message) => {
+      const role = message?.role === "ai" || message?.role === "assistant"
+        ? "assistant"
+        : message?.role === "user"
+          ? "user"
+          : "";
+      const content = cleanBrandName(message?.text || message?.content).trim();
+
+      return role && content
+        ? { role, content: content.slice(0, 2500) }
+        : null;
+    })
+    .filter(Boolean);
+
+  const latest = String(latestMessage || "").trim();
+
+  if (
+    latest &&
+    normalized.length &&
+    normalized[normalized.length - 1].role === "user" &&
+    normalized[normalized.length - 1].content === latest
+  ) {
+    normalized.pop();
+  }
+
+  return normalized;
+}
+
 function buildImageEnhancementPrompt(message) {
   const userRequest = String(message || "").trim();
 
@@ -168,6 +223,7 @@ app.post("/chat", async (req, res) => {
 const rawMessage = String(req.body.message || "");
 const userMessage = rawMessage.toLowerCase();
 const uploadedImage = req.body.image;
+const chatHistory = normalizeChatHistory(req.body.history, rawMessage);
 const selectedGameKey = gameModes[req.body.gameKey] ? req.body.gameKey : "";
 const selectedGame = selectedGameKey ? gameModes[selectedGameKey] : null;
 const selectedModelKey = nyxoModels[req.body.modelKey] ? req.body.modelKey : defaultModelKey;
@@ -186,6 +242,12 @@ if (
 ) {
   return res.json({
     reply: "My Tester is ItzRealLight."
+  });
+}
+
+if (isIdentityQuestion(rawMessage)) {
+  return res.json({
+    reply: "I am NyxoGPT."
   });
 }
 
@@ -260,8 +322,8 @@ if (uploadedImage?.dataUrl) {
       {
         role: "system",
         content: wantsImageEnhancement
-          ? `You are NEX-GPT with vision and photo enhancement expertise. Give practical, image-specific enhancement advice. Keep the tone helpful, direct, and concise. ${accuracyRules} ${conciseAnswerRules} ${gameInstruction} ${selectedThinking.instruction}`
-          : `You are NEX-GPT with vision. Describe images accurately, answer questions about them, and keep replies clean, helpful, and concise. ${accuracyRules} ${conciseAnswerRules} ${gameInstruction} ${selectedThinking.instruction}`
+          ? `You are NyxoGPT with vision and photo enhancement expertise. Give practical, image-specific enhancement advice. Keep the tone helpful, direct, and concise. ${identityRules} ${accuracyRules} ${conciseAnswerRules} ${gameInstruction} ${selectedThinking.instruction}`
+          : `You are NyxoGPT with vision. Describe images accurately, answer questions about them, and keep replies clean, helpful, and concise. ${identityRules} ${accuracyRules} ${conciseAnswerRules} ${gameInstruction} ${selectedThinking.instruction}`
       },
       {
         role: "user",
@@ -286,7 +348,7 @@ if (uploadedImage?.dataUrl) {
   });
 
   return res.json({
-    reply: completion.choices[0].message.content,
+    reply: cleanBrandName(completion.choices[0].message.content),
     model: activeModel.label,
     thinkingLevel: selectedThinking.label,
     imageAction: wantsImageEnhancement ? "enhance" : "analyze"
@@ -297,9 +359,10 @@ const messages = [
   {
     role: "system",
     content: `
-You are NEX-GPT.
+You are NyxoGPT.
 
 Reply like ChatGPT.
+${identityRules}
 ${accuracyRules}
 ${conciseAnswerRules}
 ${selectedGame ? `
@@ -330,12 +393,13 @@ Use more detail only when the user asks for it or the task needs it.
 Thinking level: ${selectedThinking.label}.
 ${selectedThinking.instruction}
 `
-  },
-  {
+  }
+]
+  .concat(chatHistory)
+  .concat({
     role: "user",
     content: rawMessage
-  }
-];
+  });
 
 const completion = await groq.chat.completions.create({
   messages: messages,
@@ -345,7 +409,7 @@ const completion = await groq.chat.completions.create({
 });
 
 res.json({
-  reply: completion.choices[0].message.content,
+  reply: cleanBrandName(completion.choices[0].message.content),
   model: activeModel.label,
   thinkingLevel: selectedThinking.label,
   game: selectedGame?.label || null

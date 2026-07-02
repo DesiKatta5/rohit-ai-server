@@ -41,6 +41,7 @@ const thinkingLevels = {
 };
 const chatStorageKey = "nyxoChatHistory";
 const signInHistoryText = "Log in to see saved chats";
+const maxChatContextMessages = 14;
 const games = {
   roblox: "Roblox",
   minecraft: "Minecraft"
@@ -71,6 +72,7 @@ let voiceAudioFrame = null;
 let voiceInterruptStartedAt = 0;
 let voiceReplyStartedAt = 0;
 let isCancellingVoiceReply = false;
+let currentChatMessages = [];
 let activeUser = null;
 
 function setTheme(themeName, saveChoice = true) {
@@ -363,6 +365,37 @@ function getGameKeyForMessage(message) {
   return gameMentionPatterns[selectedGameKey].test(message) ? selectedGameKey : "";
 }
 
+function rememberChatMessage(role, text) {
+  const cleanText = String(text || "").trim();
+
+  if (!cleanText || !["user", "ai"].includes(role)) {
+    return;
+  }
+
+  currentChatMessages.push({ role, text: cleanText });
+
+  if (currentChatMessages.length > maxChatContextMessages) {
+    currentChatMessages = currentChatMessages.slice(-maxChatContextMessages);
+  }
+}
+
+function getChatContextForRequest() {
+  return currentChatMessages
+    .slice(-maxChatContextMessages)
+    .map((message) => ({
+      role: message.role,
+      text: message.text
+    }));
+}
+
+function syncCurrentChatMemory(messages = []) {
+  currentChatMessages = [];
+
+  messages.forEach((message) => {
+    rememberChatMessage(message.role === "ai" ? "ai" : "user", message.text);
+  });
+}
+
 function clampColor(value) {
   return Math.max(0, Math.min(255, value));
 }
@@ -482,6 +515,7 @@ async function requestAiReply(userText, image = null, options = {}) {
 
   addMessage("user", userText, image);
   saveMessage("user", userText, image);
+  rememberChatMessage("user", userText);
 
   if (focusInput) {
     input.focus();
@@ -498,7 +532,8 @@ async function requestAiReply(userText, image = null, options = {}) {
         image: image,
         modelKey: selectedModelKey,
         thinkingLevel: selectedThinkingLevel,
-        gameKey: getGameKeyForMessage(userText)
+        gameKey: getGameKeyForMessage(userText),
+        history: getChatContextForRequest()
       })
     });
 
@@ -518,6 +553,7 @@ async function requestAiReply(userText, image = null, options = {}) {
     thinkingMessage.remove();
     addMessage("ai", reply, responseImage, { typewriter: true });
     saveMessage("ai", reply, responseImage);
+    rememberChatMessage("ai", reply);
 
     if (speakReply) {
       speakAiReply(reply);
@@ -529,6 +565,7 @@ async function requestAiReply(userText, image = null, options = {}) {
     thinkingMessage.remove();
     addMessage("ai", errorMessage, null, { typewriter: true });
     saveMessage("ai", errorMessage);
+    rememberChatMessage("ai", errorMessage);
 
     if (speakReply) {
       speakAiReply(errorMessage);
@@ -979,9 +1016,11 @@ function respondToSimpleVoiceGreeting(transcript) {
 
   addMessage("user", transcript);
   saveMessage("user", transcript);
+  rememberChatMessage("user", transcript);
   document.body.classList.remove("voice-mode-thinking");
   addMessage("ai", reply, null, { typewriter: true });
   saveMessage("ai", reply);
+  rememberChatMessage("ai", reply);
   speakAiReply(reply);
 }
 
@@ -1229,6 +1268,7 @@ function saveMessage(role, text, image = null) {
 
 function startNewChat() {
   currentChatId = null;
+  currentChatMessages = [];
   chatBox.innerHTML = "";
   document.body.classList.remove("has-messages");
   input.value = "";
@@ -1243,6 +1283,7 @@ function openSavedChat(chatId) {
   if (!chat) return;
 
   currentChatId = chat.id;
+  syncCurrentChatMemory(chat.messages);
   chatBox.innerHTML = "";
 
   chat.messages.forEach((message) => {
