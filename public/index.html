@@ -24,8 +24,10 @@
           <span class="nav-icon">+</span>
           <span>New chat</span>
         </button>
-        <button class="nav-item" type="button">
-          <span class="nav-icon">?</span>
+        <button class="nav-item" type="button" onclick="openSearchChats()">
+          <span class="nav-icon">
+            <img class="nav-search-icon" src="search-logo.png" alt="">
+          </span>
           <span>Search chats</span>
         </button>
         <button class="nav-item" type="button" onclick="toggleThemes()">
@@ -33,6 +35,13 @@
             <img class="nav-logo-icon" src="theme-logo.png" alt="">
           </span>
           <span>Themes</span>
+        </button>
+        <button class="nav-item" id="gamesButton" type="button" onclick="openGames()">
+          <span class="nav-icon game-nav-icon" aria-hidden="true">
+            <img class="game-nav-logo minecraft-logo" src="minecraft-logo.jpg" alt="">
+            <img class="game-nav-logo roblox-logo" src="roblox-logo.png" alt="">
+          </span>
+          <span>Games</span>
         </button>
       </nav>
 
@@ -44,6 +53,24 @@
         <button class="theme-btn" type="button" onclick="setTheme('theme-dark-blue')">Dark Blue</button>
         <button class="theme-btn" type="button" onclick="setTheme('theme-dark-red')">Dark Red</button>
         <button class="theme-btn" type="button" onclick="startAutoTheme()">Auto</button>
+      </div>
+
+      <div class="game-menu" id="gameMenu" aria-live="polite">
+        <div class="game-menu-title">Choose a game</div>
+        <button class="game-btn" type="button" data-game="minecraft">
+          <img class="game-list-logo" src="minecraft-logo.jpg" alt="">
+          <span>
+            <strong>Minecraft</strong>
+            <small>Ask about survival, redstone, builds, and servers.</small>
+          </span>
+        </button>
+        <button class="game-btn" type="button" data-game="roblox">
+          <img class="game-list-logo" src="roblox-logo.png" alt="">
+          <span>
+            <strong>Roblox</strong>
+            <small>Ask about scripts, maps, avatars, and gameplay.</small>
+          </span>
+        </button>
       </div>
 
       <section class="chat-list recents" aria-label="Recent chats" id="recentChats">
@@ -142,7 +169,7 @@
           </div>
 
           <div class="quick-actions">
-            <button type="button">Analyze an image</button>
+            <button type="button">Enhance an image</button>
             <button type="button">Write or edit</button>
             <button type="button">Look something up</button>
           </div>
@@ -173,6 +200,17 @@
         <button onclick="closeHistory()" type="button" aria-label="Close history">x</button>
       </div>
       <div id="historyList"></div>
+    </div>
+  </div>
+
+  <div id="searchPopup" class="search-popup">
+    <div class="search-box">
+      <div class="search-header">
+        <h2>Search chats</h2>
+        <button onclick="closeSearchChats()" type="button" aria-label="Close search">x</button>
+      </div>
+      <input id="chatSearchInput" type="search" placeholder="Enter chat name" autocomplete="off">
+      <div id="searchResults"></div>
     </div>
   </div>
 

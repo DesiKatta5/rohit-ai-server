@@ -2,6 +2,7 @@ const input = document.getElementById("userInput");
 const chatBox = document.getElementById("chatBox");
 const micBtn = document.getElementById("micBtn");
 const themeMenu = document.getElementById("themeMenu");
+const gameMenu = document.getElementById("gameMenu");
 const recentChats = document.getElementById("recentChats");
 const imageInput = document.getElementById("imageInput");
 const imagePreview = document.getElementById("imagePreview");
@@ -16,6 +17,10 @@ const app = document.querySelector(".app");
 const sidebar = document.getElementById("appSidebar");
 const sidebarToggle = document.getElementById("sidebarToggle");
 const mobileMenuButton = document.getElementById("mobileMenuButton");
+const gamesButton = document.getElementById("gamesButton");
+const searchPopup = document.getElementById("searchPopup");
+const chatSearchInput = document.getElementById("chatSearchInput");
+const searchResults = document.getElementById("searchResults");
 
 const themes = ["theme-light", "theme-dark", "theme-blue", "theme-green", "theme-dark-blue", "theme-dark-red"];
 const mobileSidebarQuery = window.matchMedia("(max-width: 760px)");
@@ -33,11 +38,17 @@ const thinkingLevels = {
 };
 const chatStorageKey = "nyxoChatHistory";
 const signInHistoryText = "Log in to see saved chats";
+const games = {
+  roblox: "Roblox",
+  minecraft: "Minecraft"
+};
 let currentChatId = null;
 let autoThemeTimer = null;
 let attachedImage = null;
 let selectedModelKey = localStorage.getItem("nyxoModel") || "nyxo-flash";
 let selectedThinkingLevel = localStorage.getItem("nyxoThinkingLevel") || "normal";
+let selectedGameKey = localStorage.getItem("nyxoSelectedGame") || "";
+let openGamesAfterLogin = false;
 let recognition = null;
 let isListening = false;
 let activeUser = null;
@@ -55,6 +66,65 @@ function setTheme(themeName, saveChoice = true) {
 
 function toggleThemes() {
   themeMenu.classList.toggle("open");
+
+  if (gameMenu) {
+    gameMenu.classList.remove("open");
+    gamesButton.classList.remove("active");
+  }
+}
+
+function openGames() {
+  if (!activeUser) {
+    gameMenu.classList.remove("open");
+    gamesButton.classList.remove("active");
+    openGamesAfterLogin = true;
+    openLogin();
+    return;
+  }
+
+  themeMenu.classList.remove("open");
+  const isOpen = gameMenu.classList.toggle("open");
+  gamesButton.classList.toggle("active", isOpen);
+}
+
+function setGame(gameKey) {
+  if (!games[gameKey]) return;
+
+  selectedGameKey = gameKey;
+  localStorage.setItem("nyxoSelectedGame", gameKey);
+  gameMenu.classList.remove("open");
+  gamesButton.classList.remove("active");
+
+  document.querySelectorAll(".game-btn").forEach((button) => {
+    button.classList.toggle("active", button.dataset.game === gameKey);
+  });
+
+  input.placeholder = `Ask anything about ${games[gameKey]}`;
+  input.value = "";
+  addMessage("ai", `Game mode selected: ${games[gameKey]}. Ask me anything about ${games[gameKey]}.`);
+  input.focus();
+}
+
+function clearGameMode() {
+  selectedGameKey = "";
+  localStorage.removeItem("nyxoSelectedGame");
+  input.placeholder = "Ask anything";
+
+  document.querySelectorAll(".game-btn").forEach((button) => {
+    button.classList.remove("active");
+  });
+}
+
+function syncGameButtons() {
+  if (!gameMenu) return;
+
+  document.querySelectorAll(".game-btn").forEach((button) => {
+    button.classList.toggle("active", button.dataset.game === selectedGameKey);
+  });
+
+  input.placeholder = selectedGameKey && games[selectedGameKey]
+    ? `Ask anything about ${games[selectedGameKey]}`
+    : "Ask anything";
 }
 
 function isMobileSidebar() {
@@ -140,13 +210,74 @@ function cycleTheme() {
   setTheme(nextTheme, false);
 }
 
-function addMessage(type, text, image = null) {
+function appendMessageImage(messageElement, image, type) {
+  if (!image) return;
+
+  const img = document.createElement("img");
+  img.className = "message-image";
+  img.src = image.dataUrl;
+  img.alt = image.name || "Uploaded image";
+  messageElement.appendChild(img);
+
+  if (type === "ai" && image.dataUrl) {
+    const download = document.createElement("a");
+    download.className = "image-download";
+    download.href = image.dataUrl;
+    download.download = image.name || "enhanced-image.jpg";
+    download.textContent = "Download image";
+    messageElement.appendChild(download);
+  }
+}
+
+function scrollChatToBottom() {
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function typeAiMessage(content, text, messageElement, image) {
+  const fullText = String(text || "");
+  const startedAt = performance.now();
+  const charsPerSecond = Math.min(180, Math.max(80, Math.round(fullText.length / 7)));
+  let lastVisibleLength = -1;
+
+  content.classList.add("typing-text");
+
+  function renderFrame(now) {
+    const elapsedSeconds = (now - startedAt) / 1000;
+    const visibleLength = Math.min(fullText.length, Math.floor(elapsedSeconds * charsPerSecond));
+
+    if (visibleLength !== lastVisibleLength) {
+      content.textContent = fullText.slice(0, visibleLength);
+      lastVisibleLength = visibleLength;
+      scrollChatToBottom();
+    }
+
+    if (visibleLength < fullText.length) {
+      requestAnimationFrame(renderFrame);
+      return;
+    }
+
+    content.classList.remove("typing-text");
+
+    if (window.marked) {
+      content.innerHTML = marked.parse(fullText);
+    }
+
+    appendMessageImage(messageElement, image, "ai");
+    scrollChatToBottom();
+  }
+
+  requestAnimationFrame(renderFrame);
+}
+
+function addMessage(type, text, image = null, options = {}) {
   const div = document.createElement("div");
   div.className = type;
 
   const content = document.createElement("div");
 
-  if (type === "ai" && window.marked) {
+  if (options.typewriter && type === "ai") {
+    content.textContent = "";
+  } else if (type === "ai" && window.marked) {
     content.innerHTML = marked.parse(text);
   } else {
     content.textContent = text;
@@ -154,17 +285,161 @@ function addMessage(type, text, image = null) {
 
   div.appendChild(content);
 
-  if (image) {
-    const img = document.createElement("img");
-    img.className = "message-image";
-    img.src = image.dataUrl;
-    img.alt = image.name || "Uploaded image";
-    div.appendChild(img);
+  if (!options.typewriter) {
+    appendMessageImage(div, image, type);
   }
 
   document.body.classList.add("has-messages");
   chatBox.appendChild(div);
-  chatBox.scrollTop = chatBox.scrollHeight;
+  scrollChatToBottom();
+
+  if (options.typewriter && type === "ai") {
+    typeAiMessage(content, text, div, image);
+  }
+
+  return div;
+}
+
+function addThinkingMessage() {
+  const div = document.createElement("div");
+  div.className = "ai thinking-message";
+  div.setAttribute("aria-label", "AI is thinking");
+
+  const loader = document.createElement("div");
+  loader.className = "thinking-loader";
+
+  const dots = document.createElement("div");
+  dots.className = "thinking-dots";
+  dots.setAttribute("aria-hidden", "true");
+
+  for (let i = 0; i < 3; i++) {
+    dots.appendChild(document.createElement("span"));
+  }
+
+  loader.appendChild(dots);
+  div.appendChild(loader);
+  document.body.classList.add("has-messages");
+  chatBox.appendChild(div);
+  scrollChatToBottom();
+
+  return div;
+}
+
+function isEnhancementPrompt(message) {
+  const text = String(message || "").trim();
+
+  if (!text || /^uploaded an image$/i.test(text)) {
+    return true;
+  }
+
+  return /\b(enhance|improve|make better|fix|retouch|restore|upscale|clear|clarity|sharpen|denoise|brighten|color correct|colour correct|quality|beautify|clean up|photo edit)\b/i.test(text);
+}
+
+function clampColor(value) {
+  return Math.max(0, Math.min(255, value));
+}
+
+function loadImageElement(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function enhancePixels(imageData) {
+  const data = imageData.data;
+  let luminanceTotal = 0;
+  let luminanceSquaredTotal = 0;
+  const pixelCount = data.length / 4;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const luminance = (0.2126 * data[i]) + (0.7152 * data[i + 1]) + (0.0722 * data[i + 2]);
+    luminanceTotal += luminance;
+    luminanceSquaredTotal += luminance * luminance;
+  }
+
+  const averageLuminance = luminanceTotal / pixelCount;
+  const variance = Math.max(0, (luminanceSquaredTotal / pixelCount) - (averageLuminance * averageLuminance));
+  const contrast = variance < 1400 ? 1.16 : 1.08;
+  const brightness = averageLuminance < 105 ? 16 : averageLuminance > 185 ? -7 : 5;
+  const saturation = 1.08;
+  const gamma = averageLuminance < 105 ? 0.94 : averageLuminance > 190 ? 1.04 : 1;
+
+  for (let i = 0; i < data.length; i += 4) {
+    let red = data[i];
+    let green = data[i + 1];
+    let blue = data[i + 2];
+
+    red = 255 * Math.pow(red / 255, gamma);
+    green = 255 * Math.pow(green / 255, gamma);
+    blue = 255 * Math.pow(blue / 255, gamma);
+
+    red = ((red - 128) * contrast) + 128 + brightness;
+    green = ((green - 128) * contrast) + 128 + brightness;
+    blue = ((blue - 128) * contrast) + 128 + brightness;
+
+    const luminance = (0.299 * red) + (0.587 * green) + (0.114 * blue);
+    data[i] = clampColor(luminance + ((red - luminance) * saturation));
+    data[i + 1] = clampColor(luminance + ((green - luminance) * saturation));
+    data[i + 2] = clampColor(luminance + ((blue - luminance) * saturation));
+  }
+
+  return imageData;
+}
+
+function sharpenPixels(imageData, amount = 0.16) {
+  const { width, height, data } = imageData;
+  const source = new Uint8ClampedArray(data);
+
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const index = (y * width + x) * 4;
+
+      for (let channel = 0; channel < 3; channel++) {
+        const center = source[index + channel];
+        const left = source[index + channel - 4];
+        const right = source[index + channel + 4];
+        const top = source[index + channel - (width * 4)];
+        const bottom = source[index + channel + (width * 4)];
+        const detail = (4 * center) - left - right - top - bottom;
+
+        data[index + channel] = clampColor(center + (detail * amount));
+      }
+    }
+  }
+
+  return imageData;
+}
+
+async function createEnhancedImage(image) {
+  const img = await loadImageElement(image.dataUrl);
+  const maxSide = 1800;
+  const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+  const width = Math.max(1, Math.round(img.naturalWidth * scale));
+  const height = Math.max(1, Math.round(img.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+  canvas.width = width;
+  canvas.height = height;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, width, height);
+
+  const imageData = ctx.getImageData(0, 0, width, height);
+  ctx.putImageData(sharpenPixels(enhancePixels(imageData)), 0, 0);
+
+  const outputType = image.type === "image/png" ? "image/png" : "image/jpeg";
+  const extension = outputType === "image/png" ? "png" : "jpg";
+  const originalName = image.name ? image.name.replace(/\.[^.]+$/, "") : "uploaded-image";
+
+  return {
+    name: `${originalName}-enhanced.${extension}`,
+    type: outputType,
+    dataUrl: canvas.toDataURL(outputType, 0.92)
+  };
 }
 
 async function sendMessage() {
@@ -174,11 +449,19 @@ async function sendMessage() {
   if (!msg && !image) return;
 
   const userText = msg || "Uploaded an image";
+  const enhancedImagePromise = image && isEnhancementPrompt(userText)
+    ? createEnhancedImage(image).catch((error) => {
+        console.error("Image enhancement error:", error);
+        return null;
+      })
+    : Promise.resolve(null);
+
   addMessage("user", userText, image);
   saveMessage("user", userText, image);
   input.value = "";
   clearAttachedImage();
   input.focus();
+  const thinkingMessage = addThinkingMessage();
 
   try {
     const res = await fetch("/chat", {
@@ -188,7 +471,8 @@ async function sendMessage() {
         message: userText,
         image: image,
         modelKey: selectedModelKey,
-        thinkingLevel: selectedThinkingLevel
+        thinkingLevel: selectedThinkingLevel,
+        gameKey: activeUser ? selectedGameKey : ""
       })
     });
 
@@ -198,12 +482,20 @@ async function sendMessage() {
       throw new Error(data.reply || "AI request failed");
     }
 
-    const reply = data.reply || "No response";
-    addMessage("ai", reply, data.image || null);
-    saveMessage("ai", reply, data.image || null);
+    const enhancedImage = data.imageAction === "enhance" ? await enhancedImagePromise : null;
+    const responseImage = data.image || enhancedImage;
+    const replyPrefix = enhancedImage
+      ? "I made an automatic enhanced preview below.\n\n"
+      : "";
+    const reply = `${replyPrefix}${data.reply || "No response"}`;
+
+    thinkingMessage.remove();
+    addMessage("ai", reply, responseImage, { typewriter: true });
+    saveMessage("ai", reply, responseImage);
   } catch (err) {
     const errorMessage = err.message || "Connection error. Please check the server and try again.";
-    addMessage("ai", errorMessage);
+    thinkingMessage.remove();
+    addMessage("ai", errorMessage, null, { typewriter: true });
     saveMessage("ai", errorMessage);
   }
 }
@@ -242,8 +534,8 @@ function renderImagePreview(image) {
 function handleImageUpload(file) {
   if (!file || !file.type.startsWith("image/")) return;
 
-  if (file.size > 4 * 1024 * 1024) {
-    alert("Please upload an image smaller than 4MB.");
+  if (file.size > 3 * 1024 * 1024) {
+    alert("Please upload an image smaller than 3MB.");
     return;
   }
 
@@ -373,8 +665,12 @@ function openLogin() {
   document.getElementById("loginPopup").style.display = "flex";
 }
 
-function closeLogin() {
+function closeLogin(cancelPendingGameOpen = true) {
   document.getElementById("loginPopup").style.display = "none";
+
+  if (cancelPendingGameOpen) {
+    openGamesAfterLogin = false;
+  }
 }
 
 async function login() {
@@ -386,7 +682,7 @@ async function googleLogin() {
 
   try {
     await firebase.auth().signInWithPopup(provider);
-    closeLogin();
+    closeLogin(false);
   } catch (error) {
     console.error(error);
     alert("Google login failed");
@@ -416,6 +712,60 @@ function openHistory() {
 
 function closeHistory() {
   document.getElementById("historyPopup").style.display = "none";
+}
+
+function openSearchChats() {
+  searchPopup.style.display = "flex";
+  chatSearchInput.value = "";
+  renderSearchResults();
+  setTimeout(() => chatSearchInput.focus(), 0);
+}
+
+function closeSearchChats() {
+  searchPopup.style.display = "none";
+}
+
+function renderSearchResults() {
+  searchResults.innerHTML = "";
+
+  if (!activeUser) {
+    const empty = document.createElement("div");
+    empty.className = "search-empty";
+    empty.innerText = "Log in to search saved chats";
+    searchResults.appendChild(empty);
+    return;
+  }
+
+  const query = chatSearchInput.value.trim().toLowerCase();
+  const chats = getSavedChats().filter((chat) => {
+    const title = String(chat.title || "Untitled chat").toLowerCase();
+    return !query || title.includes(query);
+  });
+
+  if (!getSavedChats().length) {
+    const empty = document.createElement("div");
+    empty.className = "search-empty";
+    empty.innerText = "No saved chats yet";
+    searchResults.appendChild(empty);
+    return;
+  }
+
+  if (!chats.length) {
+    const empty = document.createElement("div");
+    empty.className = "search-empty";
+    empty.innerText = "No matching chats";
+    searchResults.appendChild(empty);
+    return;
+  }
+
+  chats.forEach((chat) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "search-result";
+    button.innerText = chat.title || "Untitled chat";
+    button.addEventListener("click", () => openSavedChat(chat.id));
+    searchResults.appendChild(button);
+  });
 }
 
 function getSavedChats() {
@@ -504,6 +854,7 @@ function openSavedChat(chatId) {
   });
 
   closeHistory();
+  closeSearchChats();
 }
 
 function deleteSavedChat(chatId) {
@@ -518,6 +869,10 @@ function deleteSavedChat(chatId) {
 
   renderRecentChats();
   loadHistory();
+
+  if (searchPopup.style.display === "flex") {
+    renderSearchResults();
+  }
 }
 
 function renderRecentChats() {
@@ -622,6 +977,13 @@ function renderAccount(user) {
     const firstName = name.split(" ")[0].split("@")[0];
     welcomeText.textContent = `Welcome, ${firstName}. What's going on?`;
 
+    if (openGamesAfterLogin) {
+      openGamesAfterLogin = false;
+      themeMenu.classList.remove("open");
+      gameMenu.classList.add("open");
+      gamesButton.classList.add("active");
+    }
+
     accountArea.innerHTML = `
       <div class="account-wrapper">
         <div class="account-box" onclick="toggleAccountMenu()">
@@ -638,6 +1000,10 @@ function renderAccount(user) {
     activeUser = null;
     currentChatId = null;
     welcomeText.textContent = "Welcome. What's going on?";
+    gameMenu.classList.remove("open");
+    gamesButton.classList.remove("active");
+    closeSearchChats();
+    clearGameMode();
     accountArea.innerHTML = `
       <button class="login-btn" onclick="openLogin()" id="loginButton" type="button">
         Login
@@ -646,6 +1012,7 @@ function renderAccount(user) {
   }
 
   renderRecentChats();
+  syncGameButtons();
 }
 
 micBtn.addEventListener("click", toggleVoiceInput);
@@ -657,6 +1024,8 @@ input.addEventListener("keydown", (e) => {
 imageInput.addEventListener("change", () => {
   handleImageUpload(imageInput.files[0]);
 });
+
+chatSearchInput.addEventListener("input", renderSearchResults);
 
 modelPickerButton.addEventListener("click", toggleModelMenu);
 thinkingToggle.addEventListener("click", toggleThinkingMenu);
@@ -682,6 +1051,12 @@ document.querySelectorAll(".thinking-option").forEach((button) => {
   });
 });
 
+document.querySelectorAll(".game-btn").forEach((button) => {
+  button.addEventListener("click", () => {
+    setGame(button.dataset.game);
+  });
+});
+
 document.addEventListener("click", (event) => {
   if (!modelMenu.contains(event.target) && !modelPickerButton.contains(event.target)) {
     modelMenu.classList.remove("open");
@@ -700,18 +1075,31 @@ document.addEventListener("click", (event) => {
   ) {
     closeSidebar();
   }
+
+  if (
+    gameMenu &&
+    !gameMenu.contains(event.target) &&
+    !event.target.closest("#gamesButton")
+  ) {
+    gameMenu.classList.remove("open");
+    gamesButton.classList.remove("active");
+  }
 });
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && app.classList.contains("sidebar-open")) {
     closeSidebar();
   }
+
+  if (event.key === "Escape" && searchPopup.style.display === "flex") {
+    closeSearchChats();
+  }
 });
 
 document.querySelectorAll(".quick-actions button").forEach((button) => {
   button.addEventListener("click", () => {
-    input.value = button.innerText === "Analyze an image"
-      ? "What is in this image?"
+    input.value = button.innerText === "Enhance an image"
+      ? "Enhance this image and tell me what to improve."
       : button.innerText;
     input.focus();
   });
@@ -730,6 +1118,7 @@ window.addEventListener("load", () => {
   renderRecentChats();
   setModel(nyxoModels[selectedModelKey] ? selectedModelKey : "nyxo-flash");
   setThinkingLevel(thinkingLevels[selectedThinkingLevel] ? selectedThinkingLevel : "normal", false);
+  syncGameButtons();
   setupVoiceInput();
   syncSidebarButtons();
 
